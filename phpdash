@@ -1,0 +1,613 @@
+<?php
+session_start();
+
+// Initialize tasks array if not exists
+if (!isset($_SESSION['tasks'])) {
+    $_SESSION['tasks'] = [
+        [
+            'id' => 1,
+            'title' => 'Attend webinar on Flutter development',
+            'date' => date('Y-m-d H:i:s'),
+            'description' => 'Join the Zoom meeting at 2 PM',
+            'isCompleted' => false,
+            'priority' => 1, // 1=Low, 2=Medium, 3=High
+            'color' => 'white',
+            'hasNotification' => false,
+            'notificationMinutesBefore' => 1440 // 24 hours
+        ],
+        [
+            'id' => 2,
+            'title' => 'Complete prototype for FlexiTask',
+            'date' => date('Y-m-d H:i:s'),
+            'description' => '',
+            'isCompleted' => false,
+            'priority' => 1,
+            'color' => 'white',
+            'hasNotification' => false,
+            'notificationMinutesBefore' => 1440
+        ],
+        [
+            'id' => 3,
+            'title' => 'Team meeting at 3 PM',
+            'date' => date('Y-m-d H:i:s'),
+            'description' => 'Discuss project timeline and deliverables',
+            'isCompleted' => false,
+            'priority' => 1,
+            'color' => 'white',
+            'hasNotification' => false,
+            'notificationMinutesBefore' => 1440
+        ],
+        [
+            'id' => 4,
+            'title' => 'Submit monthly report',
+            'date' => date('Y-m-d H:i:s', strtotime('-1 day')),
+            'description' => 'Financial summary for last month',
+            'isCompleted' => false,
+            'priority' => 2,
+            'color' => 'white',
+            'hasNotification' => false,
+            'notificationMinutesBefore' => 1440
+        ],
+        [
+            'id' => 5,
+            'title' => 'Client proposal deadline',
+            'date' => date('Y-m-d H:i:s', strtotime('-3 days')),
+            'description' => 'Final proposal for the XYZ project',
+            'isCompleted' => false,
+            'priority' => 3,
+            'color' => 'white',
+            'hasNotification' => false,
+            'notificationMinutesBefore' => 1440
+        ],
+        [
+            'id' => 6,
+            'title' => 'Review project requirements',
+            'date' => date('Y-m-d H:i:s', strtotime('+1 day')),
+            'description' => 'Check all project specifications',
+            'isCompleted' => false,
+            'priority' => 1,
+            'color' => 'white',
+            'hasNotification' => false,
+            'notificationMinutesBefore' => 1440
+        ]
+    ];
+}
+
+// Initialize completed tasks array if not exists
+if (!isset($_SESSION['completedTasks'])) {
+    $_SESSION['completedTasks'] = [];
+}
+
+// Handle form submissions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Add new task
+    if (isset($_POST['action']) && $_POST['action'] === 'addTask') {
+        $newTask = [
+            'id' => time(), // Use timestamp as ID
+            'title' => $_POST['title'],
+            'date' => $_POST['date'] . ' ' . $_POST['time'] . ':00',
+            'description' => $_POST['description'] ?? '',
+            'isCompleted' => false,
+            'priority' => (int)$_POST['priority'],
+            'color' => 'white',
+            'hasNotification' => isset($_POST['hasNotification']),
+            'notificationMinutesBefore' => (int)($_POST['notificationTime'] ?? 1440)
+        ];
+        
+        $_SESSION['tasks'][] = $newTask;
+        
+        header('Location: dash2.html');
+        exit;
+    }
+    
+    // Edit task
+    if (isset($_POST['action']) && $_POST['action'] === 'editTask') {
+        $id = (int)$_POST['id'];
+        
+        foreach ($_SESSION['tasks'] as $key => $task) {
+            if ($task['id'] === $id) {
+                $_SESSION['tasks'][$key] = [
+                    'id' => $id,
+                    'title' => $_POST['title'],
+                    'date' => $_POST['date'] . ' ' . $_POST['time'] . ':00',
+                    'description' => $_POST['description'] ?? '',
+                    'isCompleted' => false,
+                    'priority' => (int)$_POST['priority'],
+                    'color' => 'white',
+                    'hasNotification' => isset($_POST['hasNotification']),
+                    'notificationMinutesBefore' => (int)($_POST['notificationTime'] ?? 1440)
+                ];
+                break;
+            }
+        }
+        
+        header('Location: dash2.html');
+        exit;
+    }
+    
+    // Delete task
+    if (isset($_POST['action']) && $_POST['action'] === 'deleteTask') {
+        $id = (int)$_POST['id'];
+        
+        foreach ($_SESSION['tasks'] as $key => $task) {
+            if ($task['id'] === $id) {
+                unset($_SESSION['tasks'][$key]);
+                break;
+            }
+        }
+        
+        $_SESSION['tasks'] = array_values($_SESSION['tasks']);
+        
+        header('Location: dash2.html');
+        exit;
+    }
+    
+    // Complete task
+    if (isset($_POST['action']) && $_POST['action'] === 'completeTask') {
+        $id = (int)$_POST['id'];
+        
+        foreach ($_SESSION['tasks'] as $key => $task) {
+            if ($task['id'] === $id) {
+                $completedTask = $_SESSION['tasks'][$key];
+                $completedTask['isCompleted'] = true;
+                
+                $_SESSION['completedTasks'][] = $completedTask;
+                unset($_SESSION['tasks'][$key]);
+                break;
+            }
+        }
+        
+        $_SESSION['tasks'] = array_values($_SESSION['tasks']);
+        
+        header('Location: dash2.html');
+        exit;
+    }
+}
+
+// Function to group tasks by date
+function groupTasksByDate($tasks) {
+    $groupedTasks = [
+        'Today' => [],
+        'Tomorrow' => [],
+        'Upcoming' => []
+    ];
+    
+    $today = new DateTime(date('Y-m-d'));
+    $tomorrow = new DateTime(date('Y-m-d', strtotime('+1 day')));
+    
+    foreach ($tasks as $task) {
+        $taskDate = new DateTime(date('Y-m-d', strtotime($task['date'])));
+        
+        if ($taskDate->format('Y-m-d') === $today->format('Y-m-d')) {
+            $groupedTasks['Today'][] = $task;
+        } elseif ($taskDate->format('Y-m-d') === $tomorrow->format('Y-m-d')) {
+            $groupedTasks['Tomorrow'][] = $task;
+        } else {
+            // For other dates, use specific date as key
+            $dateKey = $taskDate->format('l, j F'); // Monday, 15 January
+            if (!isset($groupedTasks[$dateKey])) {
+                $groupedTasks[$dateKey] = [];
+            }
+            $groupedTasks[$dateKey][] = $task;
+        }
+    }
+    
+    // Sort each group by priority
+    foreach ($groupedTasks as &$group) {
+        usort($group, function($a, $b) {
+            // First by priority (high to low)
+            if ($a['priority'] != $b['priority']) {
+                return $b['priority'] - $a['priority'];
+            }
+            
+            // Then by time (early to late)
+            $timeA = strtotime($a['date']);
+            $timeB = strtotime($b['date']);
+            return $timeA - $timeB;
+        });
+    }
+    
+    return $groupedTasks;
+}
+
+// Get overdue tasks (1+ days)
+function getOverdueTasks($tasks) {
+    $today = new DateTime(date('Y-m-d'));
+    $overdueTasks = [];
+    
+    foreach ($tasks as $task) {
+        $taskDate = new DateTime(date('Y-m-d', strtotime($task['date'])));
+        $diff = $today->diff($taskDate);
+        
+        if ($diff->days >= 1 && $diff->invert === 1) { // invert=1 means taskDate is in the past
+            $overdueTasks[] = $task;
+        }
+    }
+    
+    // Sort overdue tasks by days overdue, then by priority
+    usort($overdueTasks, function($a, $b) {
+        $dateA = new DateTime(date('Y-m-d', strtotime($a['date'])));
+        $dateB = new DateTime(date('Y-m-d', strtotime($b['date'])));
+        $today = new DateTime(date('Y-m-d'));
+        
+        $daysOverdueA = $today->diff($dateA)->days;
+        $daysOverdueB = $today->diff($dateB)->days;
+        
+        // First by days overdue (most to least)
+        if ($daysOverdueA !== $daysOverdueB) {
+            return $daysOverdueB - $daysOverdueA;
+        }
+        
+        // Then by priority (high to low)
+        return $b['priority'] - $a['priority'];
+    });
+    
+    return $overdueTasks;
+}
+
+// Calculate overdue count
+function getOverdueTasksCount($tasks) {
+    $today = new DateTime(date('Y-m-d'));
+    $count = 0;
+    
+    foreach ($tasks as $task) {
+        $taskDate = new DateTime(date('Y-m-d', strtotime($task['date'])));
+        $diff = $today->diff($taskDate);
+        
+        if ($diff->days >= 1 && $diff->invert === 1) {
+            $count++;
+        }
+    }
+    
+    return $count;
+}
+
+// Check if any task is overdue
+$showingOverdueTasks = isset($_GET['view']) && $_GET['view'] === 'overdue';
+$overdueTasks = getOverdueTasks($_SESSION['tasks']);
+$overdueTasksCount = count($overdueTasks);
+$groupedTasks = groupTasksByDate($_SESSION['tasks']);
+
+// Format task date for display
+function formatTaskDate($dateString) {
+    $date = new DateTime($dateString);
+    return $date->format('l, j F'); // Monday, 15 January
+}
+
+// Format task time for display
+function formatTaskTime($dateString) {
+    $date = new DateTime($dateString);
+    return $date->format('g:i A'); // 5:30 PM
+}
+
+// Get days overdue
+function getDaysOverdue($dateString) {
+    $taskDate = new DateTime(date('Y-m-d', strtotime($dateString)));
+    $today = new DateTime(date('Y-m-d'));
+    $diff = $taskDate->diff($today);
+    
+    if ($diff->invert === 0) {
+        return $diff->days;
+    }
+    
+    return 0;
+}
+
+// Function to check if a task is overdue
+function isTaskOverdue($dateString) {
+    $now = new DateTime();
+    $taskDate = new DateTime($dateString);
+    return $taskDate < $now;
+}
+?>
+
+<?php
+session_start();
+
+// Initialize tasks array if not exists
+if (!isset($_SESSION['tasks'])) {
+    $_SESSION['tasks'] = [
+        [
+            'id' => 1,
+            'title' => 'Attend webinar on Flutter development',
+            'date' => date('Y-m-d H:i:s'),
+            'description' => 'Join the Zoom meeting at 2 PM',
+            'isCompleted' => false,
+            'priority' => 1, // 1=Low, 2=Medium, 3=High
+            'color' => 'white',
+            'hasNotification' => false,
+            'notificationMinutesBefore' => 1440 // 24 hours
+        ],
+        [
+            'id' => 2,
+            'title' => 'Complete prototype for FlexiTask',
+            'date' => date('Y-m-d H:i:s'),
+            'description' => '',
+            'isCompleted' => false,
+            'priority' => 1,
+            'color' => 'white',
+            'hasNotification' => false,
+            'notificationMinutesBefore' => 1440
+        ],
+        [
+            'id' => 3,
+            'title' => 'Team meeting at 3 PM',
+            'date' => date('Y-m-d H:i:s'),
+            'description' => 'Discuss project timeline and deliverables',
+            'isCompleted' => false,
+            'priority' => 1,
+            'color' => 'white',
+            'hasNotification' => false,
+            'notificationMinutesBefore' => 1440
+        ],
+        [
+            'id' => 4,
+            'title' => 'Submit monthly report',
+            'date' => date('Y-m-d H:i:s', strtotime('-1 day')),
+            'description' => 'Financial summary for last month',
+            'isCompleted' => false,
+            'priority' => 2,
+            'color' => 'white',
+            'hasNotification' => false,
+            'notificationMinutesBefore' => 1440
+        ],
+        [
+            'id' => 5,
+            'title' => 'Client proposal deadline',
+            'date' => date('Y-m-d H:i:s', strtotime('-3 days')),
+            'description' => 'Final proposal for the XYZ project',
+            'isCompleted' => false,
+            'priority' => 3,
+            'color' => 'white',
+            'hasNotification' => false,
+            'notificationMinutesBefore' => 1440
+        ],
+        [
+            'id' => 6,
+            'title' => 'Review project requirements',
+            'date' => date('Y-m-d H:i:s', strtotime('+1 day')),
+            'description' => 'Check all project specifications',
+            'isCompleted' => false,
+            'priority' => 1,
+            'color' => 'white',
+            'hasNotification' => false,
+            'notificationMinutesBefore' => 1440
+        ]
+    ];
+}
+
+// Initialize completed tasks array if not exists
+if (!isset($_SESSION['completedTasks'])) {
+    $_SESSION['completedTasks'] = [];
+}
+
+// Handle form submissions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Add new task
+    if (isset($_POST['action']) && $_POST['action'] === 'addTask') {
+        $newTask = [
+            'id' => time(), // Use timestamp as ID
+            'title' => $_POST['title'],
+            'date' => $_POST['date'] . ' ' . $_POST['time'] . ':00',
+            'description' => $_POST['description'] ?? '',
+            'isCompleted' => false,
+            'priority' => (int)$_POST['priority'],
+            'color' => 'white',
+            'hasNotification' => isset($_POST['hasNotification']),
+            'notificationMinutesBefore' => (int)($_POST['notificationTime'] ?? 1440)
+        ];
+        
+        $_SESSION['tasks'][] = $newTask;
+        
+        header('Location: dash2.html');
+        exit;
+    }
+    
+    // Edit task
+    if (isset($_POST['action']) && $_POST['action'] === 'editTask') {
+        $id = (int)$_POST['id'];
+        
+        foreach ($_SESSION['tasks'] as $key => $task) {
+            if ($task['id'] === $id) {
+                $_SESSION['tasks'][$key] = [
+                    'id' => $id,
+                    'title' => $_POST['title'],
+                    'date' => $_POST['date'] . ' ' . $_POST['time'] . ':00',
+                    'description' => $_POST['description'] ?? '',
+                    'isCompleted' => false,
+                    'priority' => (int)$_POST['priority'],
+                    'color' => 'white',
+                    'hasNotification' => isset($_POST['hasNotification']),
+                    'notificationMinutesBefore' => (int)($_POST['notificationTime'] ?? 1440)
+                ];
+                break;
+            }
+        }
+        
+        header('Location: dash2.html');
+        exit;
+    }
+    
+    // Delete task
+    if (isset($_POST['action']) && $_POST['action'] === 'deleteTask') {
+        $id = (int)$_POST['id'];
+        
+        foreach ($_SESSION['tasks'] as $key => $task) {
+            if ($task['id'] === $id) {
+                unset($_SESSION['tasks'][$key]);
+                break;
+            }
+        }
+        
+        $_SESSION['tasks'] = array_values($_SESSION['tasks']);
+        
+        header('Location: dash2.html');
+        exit;
+    }
+    
+    // Complete task
+    if (isset($_POST['action']) && $_POST['action'] === 'completeTask') {
+        $id = (int)$_POST['id'];
+        
+        foreach ($_SESSION['tasks'] as $key => $task) {
+            if ($task['id'] === $id) {
+                $completedTask = $_SESSION['tasks'][$key];
+                $completedTask['isCompleted'] = true;
+                
+                $_SESSION['completedTasks'][] = $completedTask;
+                unset($_SESSION['tasks'][$key]);
+                break;
+            }
+        }
+        
+        $_SESSION['tasks'] = array_values($_SESSION['tasks']);
+        
+        header('Location: dash2.html');
+        exit;
+    }
+}
+
+// Function to group tasks by date
+function groupTasksByDate($tasks) {
+    $groupedTasks = [
+        'Today' => [],
+        'Tomorrow' => []
+    ];
+    
+    $today = new DateTime(date('Y-m-d'));
+    $tomorrow = new DateTime(date('Y-m-d', strtotime('+1 day')));
+    
+    foreach ($tasks as $task) {
+        $taskDate = new DateTime(date('Y-m-d', strtotime($task['date'])));
+        
+        if ($taskDate->format('Y-m-d') === $today->format('Y-m-d')) {
+            $groupedTasks['Today'][] = $task;
+        } elseif ($taskDate->format('Y-m-d') === $tomorrow->format('Y-m-d')) {
+            $groupedTasks['Tomorrow'][] = $task;
+        } else {
+            // For other dates, use specific date as key
+            $dateKey = $taskDate->format('l, j F'); // Monday, 15 January
+            if (!isset($groupedTasks[$dateKey])) {
+                $groupedTasks[$dateKey] = [];
+            }
+            $groupedTasks[$dateKey][] = $task;
+        }
+    }
+    
+    // Sort each group by priority
+    foreach ($groupedTasks as &$group) {
+        usort($group, function($a, $b) {
+            // First by priority (high to low)
+            if ($a['priority'] != $b['priority']) {
+                return $b['priority'] - $a['priority'];
+            }
+            
+            // Then by time (early to late)
+            $timeA = strtotime($a['date']);
+            $timeB = strtotime($b['date']);
+            return $timeA - $timeB;
+        });
+    }
+    
+    return $groupedTasks;
+}
+
+// Get overdue tasks (1+ days)
+function getOverdueTasks($tasks) {
+    $today = new DateTime(date('Y-m-d'));
+    $overdueTasks = [];
+    
+    foreach ($tasks as $task) {
+        if ($task['isCompleted']) continue;
+        
+        $taskDate = new DateTime(date('Y-m-d', strtotime($task['date'])));
+        $diff = $today->diff($taskDate);
+        
+        if ($diff->days >= 1 && $diff->invert === 1) { // invert=1 means taskDate is in the past
+            $overdueTasks[] = $task;
+        }
+    }
+    
+    // Sort overdue tasks by days overdue, then by priority
+    usort($overdueTasks, function($a, $b) {
+        $dateA = new DateTime(date('Y-m-d', strtotime($a['date'])));
+        $dateB = new DateTime(date('Y-m-d', strtotime($b['date'])));
+        $today = new DateTime(date('Y-m-d'));
+        
+        $daysOverdueA = $today->diff($dateA)->days;
+        $daysOverdueB = $today->diff($dateB)->days;
+        
+        // First by days overdue (most to least)
+        if ($daysOverdueA !== $daysOverdueB) {
+            return $daysOverdueB - $daysOverdueA;
+        }
+        
+        // Then by priority (high to low)
+        return $b['priority'] - $a['priority'];
+    });
+    
+    return $overdueTasks;
+}
+
+// Calculate overdue count (only tasks that are 1+ days overdue)
+function getOverdueTasksCount($tasks) {
+    $today = new DateTime(date('Y-m-d'));
+    $count = 0;
+    
+    foreach ($tasks as $task) {
+        if ($task['isCompleted']) continue;
+        
+        $taskDate = new DateTime(date('Y-m-d', strtotime($task['date'])));
+        $diff = $today->diff($taskDate);
+        
+        if ($diff->days >= 1 && $diff->invert === 1) {
+            $count++;
+        }
+    }
+    
+    return $count;
+}
+
+// Check if we're viewing the overdue tasks
+$showingOverdueTasks = isset($_GET['view']) && $_GET['view'] === 'overdue';
+
+// Get overdue tasks and count
+$overdueTasks = getOverdueTasks($_SESSION['tasks']);
+$overdueTasksCount = count($overdueTasks);
+
+// Group tasks by date for normal view
+$groupedTasks = groupTasksByDate($_SESSION['tasks']);
+
+// Format task date for display
+function formatTaskDate($dateString) {
+    $date = new DateTime($dateString);
+    return $date->format('l, j F'); // Monday, 15 January
+}
+
+// Format task time for display
+function formatTaskTime($dateString) {
+    $date = new DateTime($dateString);
+    return $date->format('g:i A'); // 5:30 PM
+}
+
+// Get days overdue
+function getDaysOverdue($dateString) {
+    $taskDate = new DateTime(date('Y-m-d', strtotime($dateString)));
+    $today = new DateTime(date('Y-m-d'));
+    $diff = $taskDate->diff($today);
+    
+    if ($diff->invert === 0) {
+        return $diff->days;
+    }
+    
+    return 0;
+}
+
+// Function to check if a task is overdue (even by less than a day)
+function isTaskOverdue($dateString) {
+    $now = new DateTime();
+    $taskDate = new DateTime($dateString);
+    return $taskDate < $now;
+}
+?>
+

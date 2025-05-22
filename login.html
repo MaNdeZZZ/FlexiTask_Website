@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Font - Lexend -->
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/css/login.css">
+</head>
+<body>
+    <!-- Decorative elements -->
+    <div class="decoration decoration-blob"></div>
+    <div class="floating-circle circle-1"></div>
+    <div class="floating-circle circle-2"></div>
+    <div class="floating-circle circle-3"></div>
+    <div class="floating-circle circle-4"></div>
+
+    <div class="container mt-4">
+        <!-- App Bar -->
+        <nav class="navbar navbar-light bg-transparent">
+            <div class="container-fluid">
+                <div class="d-flex align-items-center">
+                    <button class="btn" onclick="window.location.href = 'signin_signup.html';">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-arrow-left" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+                        </svg>
+                    </button>
+                    <h1 class="navbar-brand mb-0 h1" style="font-weight: 700;">Sign In</h1>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="container custom-container my-4">
+            <div class="row">
+                <!-- Left Column - Header and Image -->
+                <div class="col-md-5 d-flex flex-column justify-content-center">
+                    <!-- Header section -->
+                    <div>
+                        <h1 class="fw-bold fs-1">Welcome Back</h1>
+                        <p class="text-secondary mb-4">Hey! Good to see you back</p>
+                    </div>
+                    
+                    <!-- Image -->
+                    <div class="text-center">
+                        <img src="assets/images/young.svg" alt="Forgot Password" class="forgot-password-image img-fluid">
+                    </div>
+                </div>
+                
+                <!-- Right Column - Form and Buttons -->
+                <div class="col-md-7 d-flex flex-column justify-content-center">
+                    <!-- Login Form -->
+                    <form id="loginForm" style="margin-top: 10rem;">
+                        <!-- Email Field -->
+                        <div class="mb-4">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white">
+                                    <i class="bi bi-envelope"></i>
+                                </span>
+                                <input type="email" class="form-control py-2" id="email" placeholder="Enter your email" required>
+                            </div>
+                        </div>
+                        
+                        <!-- Password Field -->
+                        <div class="mb-3">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white">
+                                    <i class="bi bi-lock"></i>
+                                </span>
+                                <input type="password" class="form-control py-2" id="password" placeholder="Enter your password" required>
+                            </div>
+                        </div>
+                        
+                        <!-- Remember Me and Forgot Password -->
+                        <div class="d-flex justify-content-between mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="rememberMe">
+                                <label class="form-check-label" for="rememberMe">
+                                    Remember me
+                                </label>
+                            </div>
+                            <div>
+                                <a href="forgotpass.html" class="text-secondary text-decoration-none">Forgot Password?</a>
+                            </div>
+                        </div>
+                        
+                        <!-- Login Button -->
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-login w-100 py-2 rounded-3 shadow-sm">Login</button>
+                        </div>
+                        
+                        <!-- Google Sign-In Button -->
+                        <div>
+                            <button type="button" class="btn btn-google w-100 py-2 rounded-3 shadow-sm">
+                                <div class="d-flex align-items-center justify-content-center">
+                                    <img src="assets/images/Logo Google.svg" alt="Google" height="24">
+                                    <span class="ms-3">Sign in with Google</span>
+                                </div>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/login.js"></script>
+</body>
+</html>
