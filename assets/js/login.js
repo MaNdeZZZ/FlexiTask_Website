@@ -70,6 +70,40 @@ class AuthService {
         return false;
     }
 
+    // Login user
+    static login(email, password, rememberMe = false) {
+        // Get users from localStorage
+        const users = JSON.parse(localStorage.getItem('users') || '[]');
+        const user = users.find(u => u.email === email);
+        
+        // User not found or password doesn't match
+        if (!user || user.password !== password) {
+            return { success: false, message: 'Invalid email or password' };
+        }
+        
+        // Check if email is verified
+        if (!user.verified) {
+            return { success: false, message: 'Please verify your email before logging in' };
+        }
+        
+        // Set current user in sessionStorage
+        sessionStorage.setItem('currentUser', JSON.stringify(user));
+        
+        // Handle remember me
+        if (rememberMe) {
+            // Store credentials for remember me (in real app, use more secure methods)
+            localStorage.setItem('rememberMe', 'true');
+            localStorage.setItem('email', email);
+            localStorage.setItem('password', password);
+            
+            // Set expiry for 30 days
+            const expiryTime = Date.now() + (30 * 24 * 60 * 60 * 1000);
+            localStorage.setItem('rememberMeExpiry', expiryTime.toString());
+        }
+        
+        return { success: true };
+    }
+    
     // Get current user
     static getCurrentUser() {
         return JSON.parse(localStorage.getItem('currentUser') || 'null');
@@ -90,19 +124,12 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
         return;
     }
     
-    // Authenticate user
-    if (!AuthService.authenticateUser(email, password)) {
-        alert('Invalid email or password');
+    // Login user with verification check
+    const loginResult = AuthService.login(email, password, rememberMe);
+    
+    if (!loginResult.success) {
+        alert(loginResult.message);
         return;
-    }
-    
-    // Use AuthService to save credentials
-    AuthService.saveCredentials(email, password, rememberMe);
-    
-    if (rememberMe) {
-        console.log("Credentials saved. Expiry time:", localStorage.getItem('rememberMeExpiry'));
-    } else {
-        console.log("Remember me not checked, credentials cleared");
     }
     
     // Perform login (redirect to dashboard)

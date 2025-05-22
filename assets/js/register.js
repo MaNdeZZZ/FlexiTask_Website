@@ -23,7 +23,32 @@ function isEmailRegistered(email) {
     return users.some(user => user.email === email);
 }
 
-// Save user data to localStorage
+// Generate a verification token
+function generateVerificationToken() {
+    const tokenLength = 64;
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let token = '';
+    
+    for (let i = 0; i < tokenLength; i++) {
+        token += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    
+    return token;
+}
+
+// Show verification sent screen
+function showVerificationSentScreen(email) {
+    // Hide registration form
+    document.getElementById('registerForm').closest('.container').classList.add('d-none');
+    
+    // Update email display
+    document.getElementById('emailDisplay').textContent = email;
+    
+    // Show verification screen
+    document.getElementById('verificationSentScreen').classList.remove('d-none');
+}
+
+// Save user data to localStorage with verification status
 function saveUser(email, password, username) {
     // Get existing users or initialize empty array
     let users = JSON.parse(localStorage.getItem('users') || '[]');
@@ -31,13 +56,20 @@ function saveUser(email, password, username) {
     // Check if user already exists
     const existingUserIndex = users.findIndex(user => user.email === email);
     
+    // Generate verification token
+    const verificationToken = generateVerificationToken();
+    const tokenExpiry = Date.now() + (24 * 60 * 60 * 1000); // 24 hours from now
+    
     // Create user object
     const user = {
         email: email,
         password: password,
         username: username,
         profileImage: null,
-        tasks: [] // Initialize empty task list for new users
+        tasks: [], // Initialize empty task list for new users
+        verified: false,
+        verificationToken: verificationToken,
+        verificationExpiry: tokenExpiry
     };
     
     // Update or add user
@@ -49,7 +81,48 @@ function saveUser(email, password, username) {
     
     // Save back to localStorage
     localStorage.setItem('users', JSON.stringify(users));
+    
+    return verificationToken;
 }
+
+// Simulated function to send verification email
+function sendVerificationEmail(email, token) {
+    console.log('Verification link would be sent to:', email);
+    console.log('Verification link:', `${window.location.origin}/verify-email.html?token=${token}&email=${encodeURIComponent(email)}`);
+    
+    // In a real app, this would make an API call to send an email
+    // For this demo, we'll just simulate success
+    return true;
+}
+
+// Resend verification email
+function resendVerificationEmail() {
+    const email = document.getElementById('emailDisplay').textContent;
+    if (!email) return;
+    
+    let users = JSON.parse(localStorage.getItem('users') || '[]');
+    const user = users.find(u => u.email === email);
+    
+    if (user && !user.verified) {
+        // Generate new token
+        const newToken = generateVerificationToken();
+        user.verificationToken = newToken;
+        user.verificationExpiry = Date.now() + (24 * 60 * 60 * 1000); // 24 hours from now
+        
+        // Update user
+        localStorage.setItem('users', JSON.stringify(users));
+        
+        // Send new verification email
+        if (sendVerificationEmail(email, newToken)) {
+            alert('A new verification email has been sent.');
+        } else {
+            alert('Failed to send verification email. Please try again later.');
+        }
+    }
+}
+
+// Make function available globally
+window.resendVerificationEmail = resendVerificationEmail;
 
 // Validate password strength
 function validatePassword(password) {
@@ -101,11 +174,14 @@ document.getElementById('registerForm').addEventListener('submit', function(e) {
     // Extract username from email
     const extractedUsername = extractUsernameFromEmail(email);
     
-    // Save user data
-    saveUser(email, password, extractedUsername);
+    // Save user data with verification token
+    const verificationToken = saveUser(email, password, extractedUsername);
     
-    alert(`Registration successful! Welcome, ${extractedUsername}!`);
-    
-    // Redirect to login page
-    window.location.href = "login.html";
+    // Send verification email
+    if (sendVerificationEmail(email, verificationToken)) {
+        // Show verification sent screen
+        showVerificationSentScreen(email);
+    } else {
+        alert('Failed to send verification email. Please try again.');
+    }
 });
