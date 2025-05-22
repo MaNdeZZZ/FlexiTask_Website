@@ -36,7 +36,7 @@
         <nav class="navbar navbar-light bg-transparent">
             <div class="container-fluid">
                 <div class="d-flex align-items-center">
-                    <button class="btn" onclick="window.location.href = 'signin_signup.html';">
+                    <button class="btn" onclick="window.location.href = 'signin-signup.html';">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-arrow-left" viewBox="0 0 16 16">
                             <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
                         </svg>
@@ -107,6 +107,33 @@
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Verification Sent Screen (initially hidden) -->
+    <div class="container mt-4 d-none" id="verificationSentScreen">
+        <div class="row justify-content-center">
+            <div class="col-md-8 form-container">
+                <div class="card p-4 text-center">
+                    <div class="card-body d-flex flex-column align-items-center">
+                        <i class="bi bi-envelope-check text-success" style="font-size: 5rem;"></i>
+                        <h2 class="my-3">Verify Your Email</h2>
+                        <p class="text-secondary mb-3" aria-live="polite">
+                            We've sent a verification link to <span id="emailDisplay"></span>.
+                            Please check your inbox and follow the instructions to verify your account.
+                        </p>
+                        <p class="fw-medium mb-4">You won't be able to login until your email is verified.</p>
+                        <div class="d-flex gap-3">
+                            <button class="btn btn-outline-secondary py-2" onclick="resendVerificationEmail()">
+                                <i class="bi bi-arrow-repeat me-2"></i>Resend Email
+                            </button>
+                            <button class="btn btn-success py-2" onclick="window.location.href='login.html'">
+                                Go to Login
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
