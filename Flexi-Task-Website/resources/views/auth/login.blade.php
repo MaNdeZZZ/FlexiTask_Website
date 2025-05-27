@@ -2,8 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign In</title>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
     <!-- Bootstrap & Fonts -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -12,6 +16,23 @@
 
     <!-- Custom CSS -->
     @vite('resources/css/login.css')
+    <!-- Firebase App (core SDK) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<!-- Firebase Auth -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+
+<script>
+    // Firebase config dari Firebase Console (Project Settings > General)
+    const firebaseConfig = {
+            apiKey: "AIzaSyDAhcqyzf8x1FXd0Zqka12t_NQaoCEWD44",
+            authDomain: "flexi-task-5d512.firebaseapp.com",
+            projectId: "flexi-task-5d512",
+            appId: "1:161145697554:web:23d9c0c67426e92a97afcb",
+    };
+
+    firebase.initializeApp(firebaseConfig);
+</script>
+
 </head>
 <body>
     <!-- Decorative Background -->

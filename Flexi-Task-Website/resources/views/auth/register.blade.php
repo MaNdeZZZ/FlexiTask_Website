@@ -2,9 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Up</title>
-
+ 
     <!-- Bootstrap & Font -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -12,6 +14,20 @@
 
     <!-- Custom CSS via Vite -->
     @vite('resources/css/register.css')
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDAhcqyzf8x1FXd0Zqka12t_NQaoCEWD44",
+            authDomain: "flexi-task-5d512.firebaseapp.com",
+            projectId: "flexi-task-5d512",
+            appId: "1:161145697554:web:23d9c0c67426e92a97afcb",
+        };
+        firebase.initializeApp(firebaseConfig);
+    </script>
+
 </head>
 <body>
     <!-- Background Decoration -->
@@ -75,14 +91,15 @@
                             </div>
 
                             <div class="mb-3">
-                                <button type="button" class="google-btn" onclick="handleGoogleSignUp()">
+                                <button type="button" class="btn-google">
                                     <img src="{{ asset('images/Logo Google.svg') }}" alt="Google" class="google-logo">
                                     Sign up with Google
                                 </button>
+
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>          
             </div>
         </div>
     </div>

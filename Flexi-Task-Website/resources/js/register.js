@@ -1,57 +1,55 @@
-// Function to go back to previous page
-function goBack() {
-    window.history.back();
-}
+document.getElementById('registerForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
 
-// Function to handle Google Sign-Up
-function handleGoogleSignUp() {
-    // This would be implemented with Google OAuth
-    alert('Google sign-up functionality would be implemented here');
-}
+    const email = document.getElementById('emailInput').value;
+    const password = document.getElementById('passwordInput').value;
+    const verifyPassword = document.getElementById('verifyPasswordInput').value;
 
-// Extract username from email
-function extractUsernameFromEmail(email) {
-    if (email.includes('@')) {
-        return email.split('@')[0];
+    // Validasi dasar
+    if (!email || !password || !verifyPassword) {
+        alert('Please fill all fields');
+        return;
     }
-    return email;
-}
 
-// Check if user email already exists
-function isEmailRegistered(email) {
-    let users = JSON.parse(localStorage.getItem('users') || '[]');
-    return users.some(user => user.email === email);
-}
-
-// Save user data to localStorage
-function saveUser(email, password, username) {
-    // Get existing users or initialize empty array
-    let users = JSON.parse(localStorage.getItem('users') || '[]');
-    
-    // Check if user already exists
-    const existingUserIndex = users.findIndex(user => user.email === email);
-    
-    // Create user object
-    const user = {
-        email: email,
-        password: password,
-        username: username,
-        profileImage: null,
-        tasks: [] // Initialize empty task list for new users
-    };
-    
-    // Update or add user
-    if (existingUserIndex >= 0) {
-        users[existingUserIndex] = user;
-    } else {
-        users.push(user);
+    if (password !== verifyPassword) {
+        alert('Passwords do not match');
+        return;
     }
-    
-    // Save back to localStorage
-    localStorage.setItem('users', JSON.stringify(users));
-}
 
-// Validate password strength
+    const passwordValidationResult = validatePassword(password);
+    if (passwordValidationResult) {
+        alert(passwordValidationResult);
+        return;
+    }
+
+    try {
+        const response = await fetch("/register", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute("content")
+            },
+            body: JSON.stringify({
+                email: email,
+                password: password,
+                password_confirmation: verifyPassword
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert(`Registration successful! Welcome, ${email}!`);
+            window.location.href = "/login";
+        } else {
+            alert(data.error || "Registration failed.");
+        }
+    } catch (error) {
+        console.error(error);
+        alert("An error occurred. Please try again.");
+    }
+});
+
 function validatePassword(password) {
     let hasUppercase = /[A-Z]/.test(password);
     let hasDigit = /[0-9]/.test(password);
@@ -66,46 +64,19 @@ function validatePassword(password) {
     return '';
 }
 
-// Form submission
-document.getElementById('registerForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const email = document.getElementById('emailInput').value;
-    const password = document.getElementById('passwordInput').value;
-    const verifyPassword = document.getElementById('verifyPasswordInput').value;
-    
-    // Basic validation
-    if (!email || !password || !verifyPassword) {
-        alert('Please fill all fields');
-        return;
-    }
+document.querySelector('.btn-google').addEventListener('click', async function () {
+    const provider = new firebase.auth.GoogleAuthProvider();
 
-    if (password !== verifyPassword) {
-        alert('Passwords do not match');
-        return;
-    }
+    try {
+        const result = await firebase.auth().signInWithPopup(provider);
+        const user = result.user;
 
-    // Validate password strength
-    const passwordValidationResult = validatePassword(password);
-    if (passwordValidationResult) {
-        alert(passwordValidationResult);
-        return;
+        alert("Google Sign-Up Berhasil!\nWelcome, " + user.displayName);
+        window.location.href = "/dash2";
+    } catch (error) {
+        console.error("Google Sign-Up Error:", error); // ✅ Tampilkan detail error di console
+        alert("Gagal mendaftar dengan Google.");
     }
-
-    // Check if email already registered
-    if (isEmailRegistered(email)) {
-        alert('This email is already registered. Please use a different email or login.');
-        return;
-    }
-
-    // Extract username from email
-    const extractedUsername = extractUsernameFromEmail(email);
-    
-    // Save user data
-    saveUser(email, password, extractedUsername);
-    
-    alert(`Registration successful! Welcome, ${extractedUsername}!`);
-    
-    // Redirect to login page
-    window.location.href = "login.html";
 });
+
+
