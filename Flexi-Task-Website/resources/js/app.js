@@ -2,7 +2,7 @@
 import { generateTaskId } from './modules/utils.js'; 
 
 // Modul otentikasi dan data
-import { checkAuthStatus, getCurrentUser } from './modules/auth.js';
+import { isAuthenticated, getCurrentUser } from './modules/auth.js';
 import { 
     loadTasksForCurrentUser, 
     saveTasksToStorage,
@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- INISIALISASI ---
     function initApp() {
-        if (!checkAuthStatus()) {
+        if (!isAuthenticated()) {
             window.location.href = '/login';
             return;
         }

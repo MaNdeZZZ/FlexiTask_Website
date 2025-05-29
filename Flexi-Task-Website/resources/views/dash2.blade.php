@@ -288,5 +288,25 @@
     
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDAhcqyzf8x1FXd0Zqka12t_NQaoCEWD44",
+            authDomain: "flexi-task-5d512.firebaseapp.com",
+            projectId: "flexi-task-5d512",
+            appId: "1:161145697554:web:23d9c0c67426e92a97afcb",
+            databaseURL: "https://flexi-task-5d512-default-rtdb.firebaseio.com" // Tambahkan URL database
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        
+        // Initialize Firestore
+        const db = firebase.firestore();
+    </script>
 </body>
 </html>

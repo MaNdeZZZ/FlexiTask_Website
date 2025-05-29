@@ -1,50 +1,146 @@
+// Auth Module
+let currentUser = null;
 
-// Check if user is logged in
-export function checkAuthStatus() {
-    console.log("Checking authentication status...");
+// Initialize auth state listener
+firebase.auth().onAuthStateChanged(user => {
+    if (user) {
+        // User is signed in
+        currentUser = {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            photoURL: user.photoURL
+        };
+        // Store in localStorage for persistence
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    } else {
+        // User is signed out
+        currentUser = null;
+        localStorage.removeItem('currentUser');
+    }
+});
+
+// Get current user
+export function getCurrentUser() {
+    if (currentUser) return currentUser;
     
-    const currentUser = getCurrentUser();
-    
-    if (!currentUser) {
-        console.log("User not authenticated, redirecting to login");
-        window.location.href = '/login';
-        return false;
+    // Try to get from localStorage
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+        currentUser = JSON.parse(storedUser);
+        return currentUser;
     }
     
-    // Log authentication details for debugging
-    console.log("User authenticated:", currentUser.username || currentUser.email);
-    
-    return true;
+    return null;
 }
 
-// Get current user from session/localStorage
-export function getCurrentUser() {
-    // In a Laravel app, we could check for a user session
-    // For now, we'll check localStorage as a fallback
+// Sign in with email and password
+export async function signInWithEmail(email, password) {
     try {
-        const userJson = localStorage.getItem('currentUser');
-        if (userJson) {
-            return JSON.parse(userJson);
-        }
-        
-        // Check if we have Laravel auth data available
-        const userElement = document.getElementById('auth-user-data');
-        if (userElement && userElement.dataset.user) {
-            const userData = JSON.parse(userElement.dataset.user);
-            localStorage.setItem('currentUser', JSON.stringify(userData));
-            return userData;
-        }
-        
-        // For testing purposes, create a dummy user if none exists
-        const dummyUser = { 
-            id: 'test_user', 
-            username: 'Test User', 
-            email: 'test@example.com' 
-        };
-        localStorage.setItem('currentUser', JSON.stringify(dummyUser));
-        return dummyUser;
+        const result = await firebase.auth().signInWithEmailAndPassword(email, password);
+        return result.user;
     } catch (error) {
-        console.error("Error getting current user:", error);
-        return null;
+        console.error('Error signing in:', error);
+        throw error;
+    }
+}
+
+// Sign in with Google
+export async function signInWithGoogle() {
+    try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        const result = await firebase.auth().signInWithPopup(provider);
+        return result.user;
+    } catch (error) {
+        console.error('Error signing in with Google:', error);
+        throw error;
+    }
+}
+
+// Sign out
+export async function signOut() {
+    try {
+        await firebase.auth().signOut();
+        currentUser = null;
+        localStorage.removeItem('currentUser');
+    } catch (error) {
+        console.error('Error signing out:', error);
+        throw error;
+    }
+}
+
+// Register with email and password
+export async function registerWithEmail(email, password) {
+    try {
+        const result = await firebase.auth().createUserWithEmailAndPassword(email, password);
+        return result.user;
+    } catch (error) {
+        console.error('Error registering:', error);
+        throw error;
+    }
+}
+
+// Check if user is authenticated
+export function isAuthenticated() {
+    return !!getCurrentUser();
+}
+
+// Get user profile data
+export async function getUserProfile() {
+    const user = getCurrentUser();
+    if (!user) return null;
+
+    try {
+        const doc = await firebase.firestore()
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (doc.exists) {
+            return doc.data();
+        }
+
+        // If profile doesn't exist, create it
+        const profileData = {
+            email: user.email,
+            displayName: user.displayName || user.email.split('@')[0],
+            photoURL: user.photoURL,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        await firebase.firestore()
+            .collection('users')
+            .doc(user.uid)
+            .set(profileData);
+
+        return profileData;
+    } catch (error) {
+        console.error('Error getting user profile:', error);
+        throw error;
+    }
+}
+
+// Update user profile
+export async function updateUserProfile(profileData) {
+    const user = getCurrentUser();
+    if (!user) throw new Error('No user logged in');
+
+    try {
+        await firebase.firestore()
+            .collection('users')
+            .doc(user.uid)
+            .update({
+                ...profileData,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+        // Update local user data
+        currentUser = { ...currentUser, ...profileData };
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+        return currentUser;
+    } catch (error) {
+        console.error('Error updating user profile:', error);
+        throw error;
     }
 }
