@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <!-- Add this meta tag to help Bootstrap detect mobile devices -->
+    <meta name="mobile-web-app-capable" content="yes">
     <title>FlexiTask - Task Management</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -11,7 +14,7 @@
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <!-- Custom CSS -->
-    @vite(['resources/css/dash2.css', 'resources/js/dash2.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>
     <div class="container-fluid p-0">
@@ -20,10 +23,10 @@
                 <!-- Header with logo and profile - Updated with larger sizes -->
                 <div class="d-flex justify-content-between align-items-center header-padding">
                     <div class="d-flex align-items-center">
-                        <img src="public/images/logo_FLXT.png" alt="FlexiTask Logo" height="55" width="55" id="logoImg">
+                        <img src="{{ asset('images/logo_FLXT.png') }}" alt="FlexiTask Logo" height="55" width="55" id="logoImg">
                     </div>
                 <div>
-                    <div class="profile-pic" id="profilePic" onclick="window.location.href='profile.html'" style="cursor: pointer;">
+                    <div class="profile-pic" id="profilePic" onclick="window.location.href='{{ url('/profile') }}'" style="cursor: pointer;">
                         <!-- Diganti dari img tag menjadi struktur div yang dapat menampung icon -->
                         <div id="headerProfileImage" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;"></div>
                     </div>
@@ -47,17 +50,17 @@
             </div>
             
             <!-- Collapsible Search Panel -->
-            <div id="searchPanel" class="search-panel collapse">
+            <div id="searchPanel" class="search-panel" style="display: none;">
                 <div class="search-box">
                     <input type="text" id="searchInput" class="search-input" placeholder="Search tasks...">
-                    <button id="clearSearchBtn" class="clear-search-btn">
+                    <button id="clearSearchBtn" class="clear-search-btn" style="display: none;">
                         <i class="bi bi-x-circle"></i>
                     </button>
                 </div>
             </div>
             
             <!-- Collapsible Filter Panel -->
-            <div id="filterPanel" class="filter-panel collapse">
+            <div id="filterPanel" class="filter-panel" style="display: none;">
                 <div class="filter-options">
                     <div class="filter-header">Filter by Priority</div>
                     <div class="filter-item">
@@ -136,30 +139,30 @@
     </div>
     
     <!-- Bottom Navigation Bar -->
-<nav class="navbar fixed-bottom bg-white shadow-lg">
-    <div class="container">
-        <div class="row w-100">
-            <div class="col-4 text-center">
-                <a href="#" class="bottom-nav-link" id="assistantBtn">
-                    <i class="bi bi-robot"></i>
-                    <span class="small">Assistant</span>
-                </a>
-            </div>
-            <div class="col-4 text-center">
-                <a href="#" class="bottom-nav-link active" id="addTaskBtn">
-                    <i class="bi bi-plus-circle-fill"></i>
-                    <span class="small">Add Task</span>
-                </a>
-            </div>
-            <div class="col-4 text-center">
-                <a href="#" class="bottom-nav-link" id="completedBtn">
-                    <i class="bi bi-check-circle"></i>
-                    <span class="small">Completed</span>
-                </a>
+    <nav class="navbar fixed-bottom bg-white shadow-lg">
+        <div class="container">
+            <div class="row w-100">
+                <div class="col-4 text-center">
+                    <a href="{{ url('/chatbot') }}" class="bottom-nav-link" id="assistantBtn">
+                        <i class="bi bi-robot"></i>
+                        <span class="small">Assistant</span>
+                    </a>
+                </div>
+                <div class="col-4 text-center d-flex justify-content-center">
+                    <button type="button" class="btn p-0 bottom-nav-link active mx-auto border-0" id="addTaskBtn">
+                        <i class="bi bi-plus-circle-fill"></i>
+                        <span class="small">Add Task</span>
+                    </button>
+                </div>
+                <div class="col-4 text-center">
+                    <a href="{{ url('/completed') }}" class="bottom-nav-link" id="completedBtn">
+                        <i class="bi bi-check-circle"></i>
+                        <span class="small">Completed</span>
+                    </a>
+                </div>
             </div>
         </div>
-    </div>
-</nav>
+    </nav>
     
     <!-- Task Details Modal -->
     <div class="modal fade" id="taskDetailsModal" tabindex="-1" aria-hidden="true">
@@ -193,11 +196,11 @@
                     <form id="taskForm">
                         <div class="mb-3">
                             <label for="taskTitle" class="form-label">Task Title</label>
-                            <input type="text" class="form-control" id="taskTitle" required>
+                            <input type="text" class="form-control" id="taskTitle" name="title" required>
                         </div>
                         <div class="mb-3">
                             <label for="taskDescription" class="form-label">Description/Note</label>
-                            <textarea class="form-control" id="taskDescription" rows="2"></textarea>
+                            <textarea class="form-control" id="taskDescription" name="description" rows="2"></textarea>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Priority Level</label>
@@ -206,23 +209,23 @@
                                 <button type="button" class="priority-btn btn btn-outline-warning" data-priority="2">Medium</button>
                                 <button type="button" class="priority-btn btn btn-outline-danger" data-priority="3">High</button>
                             </div>
-                            <input type="hidden" id="taskPriority" value="1">
+                            <input type="hidden" id="taskPriority" name="priority" value="1">
                         </div>
                         <div class="mb-3">
                             <label for="taskDate" class="form-label">Date</label>
-                            <input type="date" class="form-control" id="taskDate" required>
+                            <input type="date" class="form-control" id="taskDate" name="date" required>
                         </div>
                         <div class="mb-3">
                             <label for="taskTime" class="form-label">Time</label>
-                            <input type="time" class="form-control" id="taskTime" required>
+                            <input type="time" class="form-control" id="taskTime" name="time" required>
                         </div>
                         <div class="mb-3 form-check form-switch">
-                            <input type="checkbox" class="form-check-input" id="enableNotification">
+                            <input type="checkbox" class="form-check-input" id="enableNotification" name="enableNotification">
                             <label class="form-check-label" for="enableNotification">Enable Notification</label>
                         </div>
                         <div class="mb-3" id="notificationTimeContainer" style="display: none;">
                             <label for="notificationTime" class="form-label">Notify me</label>
-                            <select class="form-select" id="notificationTime">
+                            <select class="form-select" id="notificationTime" name="notificationTime">
                                 <option value="1">30 seconds before (testing)</option>
                                 <option value="2">1 minute before (testing)</option>
                                 <option value="5">5 minutes before (testing)</option>

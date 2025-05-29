@@ -20,13 +20,13 @@
             <div class="header-section">
                 <div class="d-flex justify-content-between align-items-center header-padding">
                     <div class="d-flex align-items-center">
-                        <button class="btn p-0 me-3" onclick="goBack()">
+                        <!-- <button class="btn p-0 me-3" onclick="goBack()">
                             <i class="bi bi-arrow-left"></i>
-                        </button>
+                        </button> -->
                         <img src="{{ asset('images/logo_FLXT.png') }}" alt="FlexiTask Logo" height="55" width="55">
                     </div>
                     <div>
-                        <div class="profile-pic" onclick="goToProfile()">
+                        <div class="profile-pic" onclick="window.location.href='{{ url('/profile') }}'">
                             <div id="profileImage" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;"></div>
                         </div>
                     </div>
@@ -62,7 +62,7 @@
                     </a>
                 </div>
                 <div class="col-4 text-center">
-                    <a href="#" class="bottom-nav-link">
+                    <a href="{{ url('/dash2') }}" class="bottom-nav-link">
                         <i class="bi bi-house"></i>
                         <span class="small">Home</span>
                     </a>

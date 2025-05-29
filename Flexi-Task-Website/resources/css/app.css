@@ -9,3 +9,492 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+:root {
+    --dark-background: #000000;
+    --background: #ffffff;
+    --primary-text: #000000;
+    --light-text: #ffffff;
+    --accent: #34A853;
+    --save-action: #34A853;
+    --today-header: #34A853;
+}
+
+body {
+    font-family: 'Lexend', sans-serif;
+    background-color: #e6e6e6;
+    padding-bottom: 70px; 
+    overflow: hidden; 
+}
+
+.main-container {
+    background-color: var(--background);
+    display: flex;            
+    flex-direction: column;   
+    height: 100vh;            
+    overflow: hidden;         
+    position: fixed;          
+    top: 0;                   
+    left: 0;                  
+    right: 0;                 
+    bottom: 70px;             
+}
+
+.header-padding {
+    padding: 24px 24px 0 24px; /* Equivalent to pt-4 pr-4 pb-0 pl-4 */
+}
+
+/* Fix for header section to not scroll */
+.header-section {
+    flex-shrink: 0;           
+    background-color: var(--background);
+    z-index: 10;              
+}
+
+.task-container {
+    background-color: #e6e6e6;
+    min-height: 70vh;
+    position: relative;
+    flex: 1;                  /* Take up all available space */
+    overflow-y: auto;         /* Enable vertical scrolling */
+    overflow-x: hidden;       
+    padding: 16px 16px 100px 16px;    
+}
+
+#regularTasksView {
+    position: relative; 
+    min-height: 100px; 
+}
+
+#overdueCounterContainer {
+    position: relative; 
+    z-index: 5; 
+}
+
+#noTasksMessage {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 250%;  
+    transform: translateY(-50%);
+    width: 100%;
+    text-align: center;
+    padding: 2rem 1rem;
+    z-index: 5;
+}
+
+#todaySection, #tomorrowSection {
+    transition: none;
+    min-height: 30px; 
+}
+
+.task-card {
+    border-radius: 12px;
+    margin-bottom: 12px;
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    min-height: 60px; 
+}
+
+.task-card .card-body {
+    padding: 12px 16px;
+}
+
+.task-card h6 {
+    font-size: 16px;
+    font-weight: 500;
+    margin-right: 8px;
+}
+
+.task-info {
+    min-width: 0; 
+}
+
+.task-description {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    margin-bottom: 4px;
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.task-time {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.task-card.overdue {
+    border-left: 4px solid #dc3545;
+}
+
+.priority-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+}
+
+.priority-high, .priority-medium {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.priority-high {
+    background-color: rgba(255, 59, 48, 0.9); 
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.priority-medium {
+    background-color: rgba(255, 149, 0, 0.9); 
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.task-card.past-time {
+    border-left: 4px solid #dc3545;
+}
+
+.overdue-badge {
+    background-color: #dc3545;
+    color: white;
+    font-size: 9px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.notification-badge {
+    background-color: #0d6efd;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.notification-badge i {
+    font-size: 12px;
+    color: white;
+}
+
+.task-checkbox {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    /* border: 2px solid #6c757d; */
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.task-checkbox.checked {
+    background-color: var(--accent);
+    border-color: var(--accent);
+    position: relative;
+}
+
+.task-checkbox.checked::after {
+    content: "✓";
+    color: white;
+    position: absolute;
+    font-size: 12px;
+    line-height: 1;
+}
+
+.completed-task {
+    opacity: 0.5;
+}
+
+.overdue-counter {
+    background-color: #dc3545;
+    color: white;
+    padding: 5px 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    font-weight: bold;
+    margin-top: 5px;
+    font-size: 13px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.overdue-counter i {
+    font-size: 16px;
+    margin-right: 4px;
+}
+
+/* Make sure overdue counter is always visible when there are overdue tasks */
+#overdueCounter {
+    display: flex;
+    align-items: center;
+}
+
+.bottom-nav-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #6c757d;
+    text-decoration: none;
+}
+
+.bottom-nav-link.active {
+    color: var(--accent);
+}
+
+.bottom-nav-link i {
+    font-size: 1.5rem;
+}
+
+.profile-pic {
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    border: 2px solid #D9D9D9;
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Specific style for the checkbox container in overdue tasks */
+#overdueTasksList .task-checkbox {
+    margin: auto 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Date badge for overdue tasks */
+.date-badge {
+    background-color: rgba(220, 53, 69, 0.15);
+    color: #dc3545;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 8px;
+    display: inline-block;
+    text-align: center;
+    border: 1px solid rgba(220, 53, 69, 0.2);
+    width: fit-content;
+    margin-bottom: 8px;
+}
+
+/* Restore and fix styling for date headers */
+.date-header {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-weight: bold;
+    font-size: 14px;
+    display: inline-block;
+    margin-top: 16px;
+    margin-bottom: 8px;
+    transition: none; /* Prevent transitions that might cause shifts */
+}
+
+.today-header {
+    background-color: var(--today-header);
+    color: var(--light-text);
+}
+
+/* Ensure overdue tasks header has proper styling */
+#overdueTasksView .date-header {
+    background-color: #dc3545;
+    color: white;
+    font-weight: bold;
+}
+
+/* Ensure proper padding at the end of scrollable content */
+#upcomingTasksContainer {
+    margin-bottom: 20px;     /* Additional margin for the last container */
+}
+
+.task-card .row .col-auto {
+    display: flex;
+    align-items: center;
+}
+
+/* Ensure task card right column is properly aligned vertically */
+.task-card .task-actions {
+    display: flex;
+    height: 100%;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Make bottom nav bar fixed with higher z-index */
+.navbar.fixed-bottom {
+    z-index: 100;             
+    height: 70px;             
+}
+
+/* Search and Filter Icons Styles */
+.search-filter-icons {
+    padding: 0 16px 8px 16px;
+}
+
+.icon-button {
+    background: none;
+    border: none;
+    color: #6c757d;
+    font-size: 1.2rem;
+    padding: 5px;
+    cursor: pointer;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.icon-button:hover {
+    background-color: rgba(108, 117, 125, 0.1);
+}
+
+.icon-button.active {
+    color: var(--accent);
+    background-color: rgba(52, 168, 83, 0.1);
+}
+
+/* Search Panel Styles */
+.search-panel {
+    padding: 0 16px 8px 16px;
+    background-color: var(--background);
+}
+
+.search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-input {
+    width: 100%;
+    padding: 8px 36px 8px 12px;
+    border-radius: 20px;
+    border: 1px solid #dee2e6;
+    font-size: 14px;
+    background-color: #f8f9fa;
+}
+
+.search-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(52, 168, 83, 0.2);
+    border-color: var(--accent);
+}
+
+.clear-search-btn {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+    display: none;
+}
+
+/* Filter Panel Styles */
+.filter-panel {
+    padding: 0 16px 8px 16px;
+    background-color: var(--background);
+}
+
+.filter-options {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 12px;
+    border: 1px solid #dee2e6;
+}
+
+.filter-header {
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #333;
+    font-size: 14px;
+}
+
+.filter-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.filter-checkbox {
+    margin-right: 8px;
+}
+
+/* Search Results Indicator */
+.search-results-indicator {
+    padding: 4px 8px;
+    margin-top: 8px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #6c757d;
+    display: none;
+    text-align: center;
+}
+
+/* Notification Bell Icon Styles */
+.notification-bell {
+    color: #6c757d;
+    font-size: 1rem;
+    margin-right: 8px;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.notification-bell:hover {
+    color: #0d6efd;
+}
+
+.notification-bell.active {
+    color: #0d6efd;
+}
+
+/* Adjust task actions to accommodate bell icon */
+.task-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Animate bell icon when notification is active */
+@keyframes bellRing {
+    0% { transform: rotate(0); }
+    5% { transform: rotate(15deg); }
+    10% { transform: rotate(-15deg); }
+    15% { transform: rotate(10deg); }
+    20% { transform: rotate(-10deg); }
+    25% { transform: rotate(5deg); }
+    30% { transform: rotate(-5deg); }
+    35% { transform: rotate(0); }
+    100% { transform: rotate(0); }
+}
+
+.notification-bell.animate {
+    animation: bellRing 1s ease;
+}

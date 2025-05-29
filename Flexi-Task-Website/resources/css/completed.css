@@ -150,3 +150,44 @@ body {
 .navbar.fixed-bottom {
     z-index: 100;             
 }
+
+/* Add these toast-related styles */
+#toast-container {
+    position: fixed;
+    top: 40%;
+    right: 20px;
+    transform: translateY(-50%);
+    z-index: 9999;
+}
+
+.toast {
+    opacity: 1 !important;
+    background-color: #28a745 !important;
+    color: white !important;
+    border-radius: 8px !important;
+    min-width: 250px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2) !important;
+    font-weight: 500;
+}
+
+.toast .toast-body {
+    padding: 12px 15px;
+    font-size: 14px;
+}
+
+/* Animation for manual toast display */
+.toast:not(.show) {
+    display: none;
+}
+
+.toast.show {
+    display: block;
+    animation: fadeInOut 3s forwards;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translateY(20px); }
+    10% { opacity: 1; transform: translateY(0); }
+    90% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-20px); }
+}

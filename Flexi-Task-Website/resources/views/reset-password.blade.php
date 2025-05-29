@@ -23,7 +23,7 @@
     <nav class="navbar navbar-light bg-transparent">
         <div class="container-fluid app-container">
             <div class="d-flex align-items-center">
-                <button class="btn" onclick="goBack()">
+                <button class="btn" onclick="window.location.href='/profile'">
                     <i class="bi bi-arrow-left fs-4"></i>
                 </button>
                 <h5 class="mb-0 ms-2 fw-bold">Change Password</h5>
