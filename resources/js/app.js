@@ -1,4 +1,6 @@
 // Modul utilitas
+import { generateTaskId } from './modules/utils.js'; 
+
 // Modul otentikasi dan data
 import { checkAuthStatus, getCurrentUser } from './modules/auth.js';
 import { 
@@ -26,7 +28,9 @@ import { saveTask as logicSaveTask, deleteTaskById as logicDeleteTask, toggleTas
 // Modul notifikasi
 import { initNotifications } from './modules/notifications.js';
 
+console.log('✅ app.js loaded');
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('✅ DOMContentLoaded fired');
     // --- STATE APLIKASI ---
     // Semua data utama aplikasi disimpan di sini. Tidak ada lagi variabel global!
     let tasks = [];
@@ -44,7 +48,31 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeFilters = { priority: [1, 2, 3] };
 
     // --- INISIALISASI ---
-   
+   function initApp() {
+        if (!checkAuthStatus()) {
+            window.location.href = '/login';
+            return;
+        }
+
+        currentUser = getCurrentUser();
+        tasks = loadTasksForCurrentUser();
+        completedTasks = loadCompletedTasksForCurrentUser(currentUser);
+        // Inisialisasi modals dan simpan instance-nya
+        modals = initializeModals();
+
+        // Setup UI awal
+        setupProfileImage(currentUser);
+        displayUsername(currentUser);
+
+        // Pasang semua event listener
+        setupAllEventListeners();
+
+        // Mulai notifikasi
+        initNotifications(tasks, modals);
+
+        // Render tugas pertama kali
+        renderTasks(tasks, searchActive, searchTerm, filterActive, activeFilters);
+    }
 
     // --- HANDLER UNTUK AKSI ---
     function handleEditTask() {
@@ -69,6 +97,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupAllEventListeners() {
         console.log('✅ setupAllEventListeners started');
         // Contoh: Tombol "Add Task"
+        //   document.getElementById('addTaskBtn').addEventListener('click', () => {
+        //     editMode = false;
+        //     currentTask = null;
+        //     showAddTaskModal(modals); // Panggil fungsi dari ui.js
+        // });
         const addTaskBtn = document.getElementById('addTaskBtn');
         console.log('🔍 Looking for #addTaskBtn', addTaskBtn);
         if (addTaskBtn) {
@@ -311,46 +344,47 @@ if (addTaskBtnFallback && !addTaskBtnFallback.hasAttribute('data-listener-added'
     });
     }
     // --- MULAI APLIKASI ---
-    async function initApp() {
-        try {
-            console.log('🚀 Starting app initialization...');
+    // async function initApp() {
+    //     try {
+    //         console.log('🚀 Starting app initialization...');
             
-            if (!await checkAuthStatus()) {
-                console.log('❌ Auth check failed, redirecting to login');
-                window.location.href = '/login';
-                return;
-            }
+    //         if (!await checkAuthStatus()) {
+    //             console.log('❌ Auth check failed, redirecting to login');
+    //             window.location.href = '/login';
+    //             return;
+    //         }
             
-            console.log('✅ Auth check passed');
-            currentUser = auth.currentUser || getCurrentUser();
-            tasks = await loadTasksForCurrentUser();
-            completedTasks = await loadCompletedTasksForCurrentUser(currentUser);
+    //         console.log('✅ Auth check passed');
+    //         currentUser = auth.currentUser || getCurrentUser();
+    //         tasks = await loadTasksForCurrentUser();
+    //         completedTasks = await loadCompletedTasksForCurrentUser(currentUser);
             
-            console.log('📊 Data loaded, initializing modals...');
-            modals = initializeModals();
+    //         console.log('📊 Data loaded, initializing modals...');
+    //         modals = initializeModals();
             
-            if (!modals || !modals.addEditTaskModal) {
-                console.error('❌ Failed to initialize modals');
-                alert('Error: Could not initialize app properly. Please refresh the page.');
-                return;
-            }
+    //         if (!modals || !modals.addEditTaskModal) {
+    //             console.error('❌ Failed to initialize modals');
+    //             alert('Error: Could not initialize app properly. Please refresh the page.');
+    //             return;
+    //         }
             
-            console.log('✅ Modals initialized successfully');
-            setupProfileImage(currentUser);
-            displayUsername(currentUser);
+    //         console.log('✅ Modals initialized successfully');
+    //         setupProfileImage(currentUser);
+    //         displayUsername(currentUser);
             
-            console.log('🔗 Setting up event listeners...');
-            setupAllEventListeners();
+    //         console.log('🔗 Setting up event listeners...');
+    //         setupAllEventListeners();
             
-            initNotifications(tasks, modals);
-            renderTasks(tasks, searchActive, searchTerm, filterActive, activeFilters);
-            setupRealtimeListener();
+    //         initNotifications(tasks, modals);
+    //         renderTasks(tasks, searchActive, searchTerm, filterActive, activeFilters);
+    //         setupRealtimeListener();
             
-            console.log('🎉 App initialization complete!');
+    //         console.log('🎉 App initialization complete!');
             
-        } catch (error) {
-            console.error('💥 Error initializing app:', error);
-            alert('An error occurred while loading the app. Please refresh the page.');
-        }
-    }
+    //     } catch (error) {
+    //         console.error('💥 Error initializing app:', error);
+    //         alert('An error occurred while loading the app. Please refresh the page.');
+    //     }
+    // }
+    initApp();
 });
