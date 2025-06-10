@@ -1,90 +1,132 @@
-document.addEventListener('DOMContentLoaded', async function () {
-    const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
-    const rememberMeCheckbox = document.getElementById('rememberMe');
+// resources/js/login.js
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, setPersistence, browserLocalPersistence } from 'firebase/auth';
 
-    // Pre-fill if Remember Me was used
-    if (localStorage.getItem('rememberMe') === 'true') {
-        emailInput.value = localStorage.getItem('email') || '';
-        passwordInput.value = localStorage.getItem('password') || '';
-        rememberMeCheckbox.checked = true;
+const firebaseConfig = {
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: "flexi-task-5d512.firebaseapp.com",
+    projectId: "flexi-task-5d512",
+    storageBucket: "flexi-task-5d512.appspot.com",
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID
+};
+
+function saveUserToLocal(user) {
+    const userData = {
+        uid: user.uid,
+        email: user.email,
+        name: user.displayName || "",
+    };
+
+    localStorage.setItem("currentUser", JSON.stringify(userData));
+    console.log("✅ User saved to localStorage:", userData);
+}
+
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+setPersistence(auth, browserLocalPersistence)
+    .then(() => console.log('✅ Persistence set to local'))
+    .catch(error => console.error('💥 Error setting persistence:', error));
+
+async function handleLogin(email, password) {
+    try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        saveUserToLocal(user);
+
+        const idToken = await user.getIdToken();
+
+        const response = await fetch('/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json' // Ensure server returns JSON
+            },
+            body: JSON.stringify({ token: idToken })
+        });
+
+        // Check if response is OK
+        // if (!response.ok) {
+        //     const text = await response.text();
+        //     console.error(`❌ Server returned ${response.status}: ${text}`);
+        //     throw new Error(`Server error: ${response.status} ${response.statusText}`);
+        // }
+
+        // const data = await response.json();
+
+        // if (data.success) {
+        //     console.log('✅ User authenticated:', user.email);
+        //     window.location.href = '/dash2';
+        // } else {
+        //     console.error('❌ Login failed:', data.error);
+        //     alert('Login failed: ' + (data.error || 'Unknown error'));
+        // }
+        const data = await response.json();
+
+        if (data.success) {
+            console.log('✅ User authenticated:', user.email);
+            window.location.href = '/dash2';
+        } else {
+            console.error(`❌ Login failed (${response.status}):`, data.error);
+            alert('Login failed: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('💥 Login error:', error);
+        alert('Login failed: ' + error.message);
     }
+}
 
-    // Handle form submission (email + password)
-    document.getElementById('loginForm').addEventListener('submit', async function (e) {
-        e.preventDefault();
+async function handleGoogleSignIn() {
+    try {
+        const provider = new GoogleAuthProvider();
+        const userCredential = await signInWithPopup(auth, provider);
+        const user = userCredential.user;
+        saveUserToLocal(user);
 
-        const email = emailInput.value.trim();
-        const password = passwordInput.value.trim();
-        const rememberMe = rememberMeCheckbox.checked;
+        const idToken = await user.getIdToken();
 
-        if (!email || !password) {
-            alert('Please enter email and password.');
-            return;
+        const response = await fetch('/google-auth', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json' // Ensure server returns JSON
+            },
+            body: JSON.stringify({ token: idToken })
+        });
+
+        // Check if response is OK
+        if (!response.ok) {
+            const text = await response.text();
+            console.error(`❌ Server returned ${response.status}: ${text}`);
+            throw new Error(`Server error: ${response.status} ${response.statusText}`);
         }
 
-        try {
-            const response = await fetch("/login", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute("content")
-                },
-                body: JSON.stringify({ email, password })
-            });
+        const data = await response.json();
 
-            const data = await response.json();
-
-            if (response.ok) {
-                // Save credentials if Remember Me
-                if (rememberMe) {
-                    localStorage.setItem('rememberMe', 'true');
-                    localStorage.setItem('email', email);
-                    localStorage.setItem('password', password);
-                } else {
-                    localStorage.removeItem('rememberMe');
-                    localStorage.removeItem('email');
-                    localStorage.removeItem('password');
-                }
-
-                alert("Login berhasil!");
-                window.location.href = "/dash2";
-            } else {
-                alert("Login gagal: " + (data.error || "Email atau password salah."));
-            }
-        } catch (error) {
-            console.error("Login error:", error);
-            alert("Terjadi kesalahan saat login.");
+        if (data.success) {
+            console.log('✅ Google Sign-In successful:', user.email);
+            window.location.href = '/dash2';
+        } else {
+            console.error('❌ Google Sign-In failed:', data.error);
+            alert('Google Sign-In failed: ' + (data.error || 'Unknown error'));
         }
-    });
+    } catch (error) {
+        console.error('💥 Google Sign-In error:', error);
+        alert('Google Sign-In failed: ' + error.message);
+    }
+}
 
-    // 🔐 Google Sign-In
-    document.querySelector('.btn-google').addEventListener('click', async function () {
-        const provider = new firebase.auth.GoogleAuthProvider();
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    await handleLogin(email, password);
+});
 
-        try {
-            const result = await firebase.auth().signInWithPopup(provider);
-            const user = result.user;
-
-            alert("Google Sign-In Berhasil!\nWelcome, " + user.displayName);
-
-            // Redirect langsung (tanpa perlu panggil backend untuk sekarang)
-            window.location.href = "/dash2";
-
-            // (Opsional) Kirim idToken ke backend Laravel jika ingin verifikasi
-            // const idToken = await user.getIdToken();
-            // await fetch('/google-auth', {
-            //     method: 'POST',
-            //     headers: {
-            //         'Content-Type': 'application/json',
-            //         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute("content")
-            //     },
-            //     body: JSON.stringify({ token: idToken })
-            // });
-
-        } catch (error) {
-            console.error("Google Sign-In Error:", error);
-            alert("Gagal login dengan Google.");
-        }
-    });
+document.querySelector('.btn-google').addEventListener('click', async () => {
+    await handleGoogleSignIn();
 });

@@ -12,7 +12,8 @@ class FirebaseService
     public function __construct()
     {
         $factory = (new Factory)
-            ->withServiceAccount(storage_path('app/firebase_credentials.json'));
+            ->withServiceAccount(storage_path('app/firebase_credentials.json'))
+            ->withProjectId('flexi-task-5d512');
 
         $this->auth = $factory->createAuth();
     }

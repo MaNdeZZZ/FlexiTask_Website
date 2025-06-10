@@ -49,6 +49,16 @@ export function setupProfileImage(currentUser) {
     }
 }
 
+export function setupPriorityButtons() {
+    const priorityButtons = document.querySelectorAll('#addEditTaskModal .priority-btn');
+    priorityButtons.forEach(button => {
+        button.addEventListener('click', function () {
+            setPriority(this.dataset.priority);
+        });
+    });
+}
+
+
 // Display username in the UI
 export function displayUsername(currentUser) {
     // const currentUser = getCurrentUser();
@@ -202,6 +212,8 @@ export function showAddTaskModal(modals) {
     
     // Reset priority
     setPriority(1);
+    setupPriorityButtons();
+
     // Set default date and time
     setDefaultTaskDate();
     
@@ -239,49 +251,40 @@ export function showAddTaskModal(modals) {
 
 // Set priority in the add/edit task form - FIXED for correct button outlines
 export function setPriority(priority) {
-    // Update hidden input
     const priorityInput = document.getElementById('taskPriority');
     if (priorityInput) priorityInput.value = priority;
-    
-    // Update button UI
-    const priorityButtons = document.querySelectorAll('.priority-btn');
-    if (priorityButtons.length > 0) {
-        priorityButtons.forEach(button => {
-            // First, remove all active classes and reset to outline state
-            button.classList.remove('active');
-            button.classList.remove('btn-success', 'btn-warning', 'btn-danger');
-            
-            // Apply the correct outline color based on the button's own priority
-            if (button.dataset.priority === '1') {
-                button.classList.add('btn-outline-success');
-                button.classList.remove('btn-outline-warning', 'btn-outline-danger');
-            } else if (button.dataset.priority === '2') {
-                button.classList.add('btn-outline-warning');
-                button.classList.remove('btn-outline-success', 'btn-outline-danger');
-            } else if (button.dataset.priority === '3') {
-                button.classList.add('btn-outline-danger');
-                button.classList.remove('btn-outline-success', 'btn-outline-warning');
-            }
-            
-            // Add active class to selected button and apply solid color
-            if (button.dataset.priority === priority.toString()) {
-                button.classList.add('active');
-                
-                // Remove outline class for the selected button
-                if (priority === '1' || priority === 1) {
-                    button.classList.remove('btn-outline-success');
-                    button.classList.add('btn-success');
-                } else if (priority === '2' || priority === 2) {
-                    button.classList.remove('btn-outline-warning');
-                    button.classList.add('btn-warning');
-                } else {
-                    button.classList.remove('btn-outline-danger');
-                    button.classList.add('btn-danger');
-                }
-            }
-        });
+
+    const buttons = document.querySelectorAll('.priority-btn');
+    buttons.forEach(button => {
+        const btnPriority = button.dataset.priority;
+        const isActive = btnPriority === priority.toString();
+        const priorityClass = getPriorityClass(btnPriority);
+
+        // Bersihkan semua class styling
+        button.classList.remove(
+            'active',
+            'btn-success', 'btn-warning', 'btn-danger',
+            'btn-outline-success', 'btn-outline-warning', 'btn-outline-danger'
+        );
+
+        // Terapkan class sesuai status
+        if (isActive) {
+            button.classList.add('active', `btn-${priorityClass}`);
+        } else {
+            button.classList.add(`btn-outline-${priorityClass}`);
+        }
+    });
+}
+
+function getPriorityClass(priority) {
+    switch (priority.toString()) {
+        case '1': return 'success';  // Low
+        case '2': return 'warning';  // Medium
+        case '3': return 'danger';   // High
+        default: return 'secondary';
     }
 }
+
 
 // Update the overdue counter
 export function updateOverdueCounter(count) {
@@ -339,7 +342,7 @@ export function createTaskCard(task, isOverdue = false, isPastTime = false) {
     }
     
     // Create notification bell icon if notifications are enabled
-    const notificationIcon = (task.enableNotification || task.notification) 
+    const notificationIcon = (task.hasNotification) 
         ? `<div class="notification-bell ${isPastTime ? '' : 'active'}" title="Notification set for ${getNotificationText(task.notificationTime || 30)}">
              <i class="bi bi-bell-fill"></i>
            </div>`
@@ -442,231 +445,51 @@ export function renderUpcomingTasks(container, upcomingTasks) {
 }
 
 // Render tasks to the UI
-export function renderTasks(tasks, searchActive, searchTerm, filterActive, activeFilters) {
-    console.log("Rendering tasks");
-    console.log("Rendering tasks with args:", { tasks, searchActive, searchTerm, filterActive, activeFilters });
-    
-    // Get task containers
-    const todayTasksList = document.getElementById('todayTasksList');
-    const tomorrowTasksList = document.getElementById('tomorrowTasksList');
-    const upcomingTasksContainer = document.getElementById('upcomingTasksContainer');
-    const overdueTasksList = document.getElementById('overdueTasksList');
-    
-    // Clear existing content
-    if (todayTasksList) todayTasksList.innerHTML = '';
-    if (tomorrowTasksList) tomorrowTasksList.innerHTML = '';
-    if (upcomingTasksContainer) upcomingTasksContainer.innerHTML = '';
-    if (overdueTasksList) overdueTasksList.innerHTML = '';
-    
-    // Group tasks by date
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    // Apply filters to tasks if search or filter is active
-    // let filteredTasks = tasks;
-    let filteredTasks;
-    
+export function renderTasks(tasks, searchActive = false, searchTerm = '', filterActive = false, activeFilters = { priority: [1, 2, 3] }) {
+    console.log("🔄 Rendering task list (with search/filter):", tasks);
+
+    const container = document.getElementById('taskContainer');
+    container.innerHTML = '';
+
+    // ✅ Apply filtering if needed
+    let filteredTasks = tasks;
+
     if (searchActive || filterActive) {
         filteredTasks = tasks.filter(task => {
-            if (task.completed) return false;
-
-            const matchesSearch = !searchActive || 
-                task.title.toLowerCase().includes(searchTerm) || 
-                (task.description && task.description.toLowerCase().includes(searchTerm));
-
-            const matchesPriority = activeFilters.priority.includes(task.priority); 
-
+            const matchesSearch = !searchActive || task.title.toLowerCase().includes(searchTerm.toLowerCase()) || (task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase()));
+            const matchesPriority = !filterActive || activeFilters.priority.includes(task.priority);
             return matchesSearch && matchesPriority;
         });
-    } else {
-        filteredTasks = tasks.filter(task => !task.completed);
     }
-    
-    // Organize tasks by date
-    const todayTasks = [];
-    const pastTimeTodayTasks = [];
-    const tomorrowTasks = [];
-    const upcomingTasks = {};
-    const overdueTasks = [];
-    
-    // Process each filtered task and categorize
-    filteredTasks.forEach(task => {
-        const taskDate = new Date(task.date + 'T00:00:00');
-        const taskDateTime = new Date(task.date + 'T' + (task.time || '00:00'));
-        
-        // Check if task date is before yesterday (at least 1 day overdue)
-        if (taskDate < yesterday) {
-            overdueTasks.push(task);
-            return;
-        }
-        
-        // Check if task is for today but past its time
-        if (taskDate.getFullYear() === today.getFullYear() &&
-            taskDate.getMonth() === today.getMonth() &&
-            taskDate.getDate() === today.getDate() &&
-            taskDateTime < now) {
-            pastTimeTodayTasks.push(task);
-            return;
-        }
-        
-        // Check if task is for today (and not past time)
-        if (taskDate.getFullYear() === today.getFullYear() &&
-            taskDate.getMonth() === today.getMonth() &&
-            taskDate.getDate() === today.getDate()) {
-            todayTasks.push(task);
-            return;
-        }
-        
-        // Check if task is for tomorrow
-        if (taskDate.getFullYear() === tomorrow.getFullYear() &&
-            taskDate.getMonth() === tomorrow.getMonth() &&
-            taskDate.getDate() === tomorrow.getDate()) {
-            tomorrowTasks.push(task);
-            return;
-        }
-        
-        // Otherwise, it's an upcoming task
-        const dateKey = task.date;
-        if (!upcomingTasks[dateKey]) {
-            upcomingTasks[dateKey] = [];
-        }
-        upcomingTasks[dateKey].push(task);
+
+    if (!filteredTasks || filteredTasks.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted mt-5">
+                <i class="bi bi-calendar-x display-4"></i>
+                <h5>No tasks found</h5>
+                <p>Try adding a new task or changing your filter/search</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Sort by priority then time
+    const sortedTasks = filteredTasks.sort((a, b) => {
+        if (a.priority !== b.priority) return b.priority - a.priority;
+        const timeA = new Date(a.date + 'T' + (a.time || '00:00'));
+        const timeB = new Date(b.date + 'T' + (b.time || '00:00'));
+        return timeA - timeB;
     });
-    
-    // Sort all task lists by priority first, then by time
-    function sortTasksByPriorityAndTime(taskList) {
-        return taskList.sort((a, b) => {
-            // Sort by priority first (higher priority comes first)
-            if (a.priority !== b.priority) {
-                return b.priority - a.priority;
-            }
-            
-            // If same priority, sort by time
-            const timeA = new Date(a.date + 'T' + (a.time || '00:00'));
-            const timeB = new Date(b.date + 'T' + (b.time || '00:00'));
-            return timeA - timeB;
-        });
-    }
-    
-    // Apply sorting to all task lists
-    sortTasksByPriorityAndTime(overdueTasks);
-    sortTasksByPriorityAndTime(pastTimeTodayTasks);
-    sortTasksByPriorityAndTime(todayTasks);
-    sortTasksByPriorityAndTime(tomorrowTasks);
-    
-    // Also sort upcoming tasks
-    for (const dateKey in upcomingTasks) {
-        sortTasksByPriorityAndTime(upcomingTasks[dateKey]);
-    }
-    
-    // Update overdue counter
-    updateOverdueCounter(overdueTasks.length);
-    
-    // Render today's tasks - including those past their time but still today
-    if (todayTasksList) {
-        // First add past-time tasks
-        pastTimeTodayTasks.forEach(task => {
-            const card = createTaskCard(task, false, true);
-            todayTasksList.appendChild(card);
-        });
-        
-        // Then add upcoming tasks for today
-        todayTasks.forEach(task => {
-            todayTasksList.appendChild(createTaskCard(task));
-        });
-    }
-    
-    // Handle visibility of today section, header, and task list
-    const todaySection = document.getElementById('todaySection');
-    const todayHeader = document.querySelector('.today-header');
-    if (todaySection) {
-        const allTodayTasks = [...todayTasks, ...pastTimeTodayTasks];
-        const hasOverdueTasks = overdueTasks.length > 0;
-        
-        // Always keep the section visible if there are overdue tasks
-        todaySection.style.display = (allTodayTasks.length > 0 || hasOverdueTasks) ? 'block' : 'none';
-        
-        // Hide only the Today header text if no today tasks but have overdue tasks
-        if (todayHeader && allTodayTasks.length === 0 && hasOverdueTasks) {
-            todayHeader.style.display = 'none';
-        } else if (todayHeader) {
-            todayHeader.style.display = 'block';
-        }
-        
-        // Hide tasks list when there are no today tasks
-        if (allTodayTasks.length === 0 && todayTasksList) {
-            todayTasksList.style.display = 'none';
-        } else if (todayTasksList) {
-            todayTasksList.style.display = 'block';
-        }
-    }
-    
-    // Render tomorrow's tasks
-    if (tomorrowTasksList) {
-        tomorrowTasks.forEach(task => {
-            tomorrowTasksList.appendChild(createTaskCard(task));
-        });
-    }
-    
-    // Show/hide tomorrow section based on tasks
-    const tomorrowSection = document.getElementById('tomorrowSection');
-    if (tomorrowSection) {
-        tomorrowSection.style.display = tomorrowTasks.length > 0 ? 'block' : 'none';
-    }
-    
-    // Render upcoming tasks
-    if (upcomingTasksContainer) {
-        renderUpcomingTasks(upcomingTasksContainer, upcomingTasks);
-    }
-    
-    // Render overdue tasks
-    if (overdueTasksList) {
-        overdueTasks.forEach(task => {
-            overdueTasksList.appendChild(createTaskCard(task, true));
-        });
-    }
-    
-    // Show no tasks message if needed
-    const noTasksMessage = document.getElementById('noTasksMessage');
-    if (noTasksMessage) {
-        const allTasksFiltered = [...todayTasks, ...pastTimeTodayTasks, ...tomorrowTasks, ...overdueTasks];
-        for (const dateKey in upcomingTasks) {
-            allTasksFiltered.push(...upcomingTasks[dateKey]);
-        }
-        
-        if (allTasksFiltered.length === 0) {
-            noTasksMessage.classList.remove('d-none');
-            
-            // Custom message for search/filter
-            if (searchActive || filterActive) {
-                const noTasksIcon = noTasksMessage.querySelector('.bi');
-                const noTasksTitle = noTasksMessage.querySelector('h5');
-                const noTasksText = noTasksMessage.querySelector('p');
-                
-                if (noTasksIcon) noTasksIcon.className = 'bi bi-search';
-                if (noTasksTitle) noTasksTitle.textContent = 'No matching tasks found';
-                if (noTasksText) noTasksText.textContent = 'Try different search terms or filters';
-            } else {
-                // Reset to default message
-                const noTasksIcon = noTasksMessage.querySelector('.bi');
-                const noTasksTitle = noTasksMessage.querySelector('h5');
-                const noTasksText = noTasksMessage.querySelector('p');
-                
-                if (noTasksIcon) noTasksIcon.className = 'bi bi-calendar-x';
-                if (noTasksTitle) noTasksTitle.textContent = 'No tasks today';
-                if (noTasksText) noTasksText.textContent = 'Click the + button below to add a new task';
-            }
-        } else {
-            noTasksMessage.classList.add('d-none');
-        }
-    }
+
+    sortedTasks.forEach(task => {
+        const card = createTaskCard(task);
+        container.appendChild(card);
+    });
 }
+
+
+
+
 
 // Show task details
 export function showTaskDetails(taskId, tasks, modals) {
@@ -767,6 +590,7 @@ export function editCurrentTask(task, modals) {
 
     // Set priority
     setPriority(task.priority || 1);
+    setupPriorityButtons();
 
     if (modals && modals.taskDetailsModal) modals.taskDetailsModal.hide();
     if (modals && modals.addEditTaskModal) modals.addEditTaskModal.show();
