@@ -40,9 +40,16 @@ function renderIncompleteTasks() {
     }
 
     const incompleteTasks = tasks.filter(task => !task.isCompleted);
-    console.log('✅ Rendering incomplete tasks:', incompleteTasks);
-    renderTasks(incompleteTasks);
+
+    renderTasks(
+        incompleteTasks,
+        searchActive,
+        searchTerm,
+        filterActive,
+        activeFilters
+    );
 }
+
 
 
 
@@ -186,31 +193,65 @@ document.addEventListener('DOMContentLoaded', () => {
             showAddTaskModal(modals);
         });
 
-        document.getElementById('saveTaskBtn').addEventListener('click', async () => {
-            const form = document.getElementById('taskForm');
-            const formData = new FormData(form);
-            if (!formData.get('title').trim()) {
-                alert('Please enter a task title.');
-                return;
-            }
+    document.getElementById('saveTaskBtn').addEventListener('click', async () => {
+        const saveBtn = document.getElementById('saveTaskBtn');
+        saveBtn.disabled = true; // ✅ Cegah klik ganda
+
+        const form = document.getElementById('taskForm');
+        const formData = new FormData(form);
+        if (!formData.get('title').trim()) {
+            alert('Please enter a task title.');
+            saveBtn.disabled = false; // Re-enable jika gagal
+            return;
+        }
+
+        const modalEl = document.getElementById('addEditTaskModal');
+        const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modalInstance.hide(); // ✅ Langsung tutup modal
+
+        try {
             tasks = await logicSaveTask(formData, tasks, currentTask, editMode, currentUser);
             await saveTasksToStorage(tasks, currentUser);
             editMode = false;
             currentTask = null;
-            renderIncompleteTasks(); // atau renderTasks(filteredTasks) jika pakai search
+            renderIncompleteTasks();
+        } catch (err) {
+            console.error("❌ Error saving task:", err);    
+        } finally {
+            saveBtn.disabled = false;
+        }
+    });
 
-            modals.addEditTaskModal.hide();
-        });
 
-        document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
-            if (!currentTask) return;
+    document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        confirmBtn.disabled = true;
+
+        if (!currentTask) {
+            confirmBtn.disabled = false;
+            return;
+        }
+
+        modals.deleteConfirmModal.hide(); // ✅ Tutup modal segera
+
+        try {
             tasks = await logicDeleteTask(currentTask.id, tasks, currentUser);
             await saveTasksToStorage(tasks, currentUser);
             currentTask = null;
-            renderIncompleteTasks(); // atau renderTasks(filteredTasks) jika pakai search
+            renderTasks(
+                tasks.filter(task => !task.isCompleted),
+                searchActive,
+                searchTerm,
+                filterActive,
+                activeFilters
+            );
+        } catch (err) {
+            console.error("❌ Error deleting task:", err);
+        } finally {
+            confirmBtn.disabled = false;
+        }
+    });
 
-            modals.deleteConfirmModal.hide();
-        });
 
         document.getElementById('editTaskBtn').addEventListener('click', () => {
             handleEditTask();
@@ -393,14 +434,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const userId = currentUser.uid;
         const tasksCollection = collection(db, `users/${userId}/tasks`);
         onSnapshot(tasksCollection, (snapshot) => {
-            tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log("📡 Firebase tasks snapshot triggered");
+        
+        tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log("📦 Loaded tasks from Firestore:", tasks);
 
-            // ✅ Filter hanya task yang belum selesai
-            const incompleteTasks = tasks.filter(task => task.isCompleted === false);
+        const incompleteTasks = tasks.filter(task => !task.isCompleted);
+        console.log("📋 Filtered incomplete tasks:", incompleteTasks);
 
-            // ✅ Render tanpa dipengaruhi filter pencarian
-            renderIncompleteTasks();
- // panggil renderTasks(tasks) versi simple
+        renderIncompleteTasks();
         });
 
 

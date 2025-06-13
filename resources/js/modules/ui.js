@@ -446,7 +446,13 @@ export function renderUpcomingTasks(container, upcomingTasks) {
 
 // Render tasks to the UI
 export function renderTasks(tasks, searchActive = false, searchTerm = '', filterActive = false, activeFilters = { priority: [1, 2, 3] }) {
-    console.log("🔄 Rendering task list (with search/filter):", tasks);
+        console.log("🖼️ Rendering tasks:", {
+        total: tasks.length,
+        searchActive,
+        searchTerm,
+        filterActive,
+        activeFilters
+    });
 
     const container = document.getElementById('taskContainer');
     container.innerHTML = '';
