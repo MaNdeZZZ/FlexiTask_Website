@@ -1,75 +1,64 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const resetPasswordForm = document.getElementById('resetPasswordForm');
-    const emailVerificationStep = document.getElementById('emailVerificationStep');
-    const emailSentStep = document.getElementById('emailSentStep');
-    const loadingStep = document.getElementById('loadingStep');
-    const errorStep = document.getElementById('errorStep');
-    const errorMessage = document.getElementById('errorMessage');
-    const emailInput = document.getElementById('emailInput');
-    const submitBtn = resetPasswordForm.querySelector('button[type="submit"]');
+import { sendPasswordResetEmail } from "firebase/auth";
+import { auth } from "./firebase.js"; // Pastikan Anda punya file ini
 
-    // Add aria-live to email sent message
-    document.querySelector('#emailSentStep p').setAttribute('aria-live', 'polite');
+// Firebase config
+const firebaseConfig = {
+    apiKey: "AIzaSyDAhcqyzf8x1FXd0Zqka12t_NQaoCEWD44",
+    authDomain: "flexi-task-5d512.firebaseapp.com",
+    projectId: "flexi-task-5d512",
+    appId: "1:161145697554:web:23d9c0c67426e92a97afcb",
+};
 
-    function showStep(stepToShow) {
-        // Hide all steps
-        [emailVerificationStep, loadingStep, emailSentStep, errorStep].forEach(step => {
-            step.classList.remove('active-step');
-        });
-        // Show the requested step
-        stepToShow.classList.add('active-step');
+
+
+
+// Elemen DOM
+const resetPasswordForm = document.getElementById('resetPasswordForm');
+const emailInput = document.getElementById('emailInput');
+const loadingStep = document.getElementById('loadingStep');
+const emailSentStep = document.getElementById('emailSentStep');
+const errorStep = document.getElementById('errorStep');
+const emailVerificationStep = document.getElementById('emailVerificationStep');
+const errorMessage = document.getElementById('errorMessage');
+const submitBtn = resetPasswordForm.querySelector('button[type="submit"]');
+
+// Event kirim email reset
+resetPasswordForm.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const email = emailInput.value.trim();
+
+    if (!email) {
+        showError("Please enter your email address");
+        return;
     }
 
-    function resetForm() {
-        emailInput.value = '';
-        showStep(emailVerificationStep);
-    }
+    showStep(loadingStep);
+    submitBtn.disabled = true;
 
-    // Make it accessible outside
-    window.resetForm = resetForm;
+    try {
+        await sendPasswordResetEmail(auth, email);
+        localStorage.setItem('resetEmail', email); // Optional: simpan email yang dikirim
 
-    resetPasswordForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const email = emailInput.value.trim();
-        if (!email) return;
-        
-        // Show loading state
-        showStep(loadingStep);
-        
-        // Disable submit button to prevent multiple submissions
-        submitBtn.disabled = true;
-        
-        try {
-            const res = await fetch('/api/password-reset-request', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
-            });
-
-            if (!res.ok) {
-                // Safely parse JSON with error handling
-                let errorData = { message: 'Email tidak terdaftar' };
-                try {
-                    errorData = await res.json();
-                } catch (parseError) {
-                    console.error('Error parsing JSON response:', parseError);
-                }
-                
-                errorMessage.textContent = errorData.message || 'Email tidak terdaftar';
-                showStep(errorStep);
-                return;
-            }
-
-            // Success case (status 200-299)
-            showStep(emailSentStep);
-            
-        } catch (err) {
-            console.error('Network error:', err);
-            errorMessage.textContent = 'Gagal terhubung ke server';
-            showStep(errorStep);
-        } finally {
-            // Re-enable the submit button regardless of outcome
-            submitBtn.disabled = false;
+        // Update tampilan email yang ditampilkan (jika ada)
+        const emailDisplay = document.getElementById('email-display');
+        if (emailDisplay) {
+            emailDisplay.textContent = email;
         }
-    });
+
+        showStep(emailSentStep);
+    } catch (error) {
+        console.error("Firebase Error:", error);
+        showError(error.message || "Something went wrong.");
+        showStep(errorStep);
+    } finally {
+        submitBtn.disabled = false;
+    }
 });
+
+// Fungsi untuk menampilkan satu step dan menyembunyikan lainnya
+function showStep(stepToShow) {
+    [emailVerificationStep, loadingStep, emailSentStep, errorStep].forEach(step => {
+        step.classList.remove('active-step');
+    });
+    stepToShow.classList.add('active-step');
+}

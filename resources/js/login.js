@@ -11,6 +11,8 @@ const firebaseConfig = {
     appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
+
+
 function saveUserToLocal(user) {
     const userData = {
         uid: user.uid,

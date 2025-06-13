@@ -74,7 +74,8 @@
                                 </label>
                             </div>
                             <div>
-                                <a href="#" class="text-secondary text-decoration-none">Forgot Password?</a>
+                                <a href="/forgot-password" class="text-secondary text-decoration-none">Forgot Password?</a>
+        
                             </div>
                         </div>
                         <div class="mb-3">

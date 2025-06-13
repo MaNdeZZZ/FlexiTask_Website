@@ -27,6 +27,17 @@ function showVerificationSent() {
     document.getElementById('verification-sent').classList.remove('d-none');
 }
 
+function goBack() {
+    const origin = localStorage.getItem('origin');
+
+    if (origin === 'login') {
+        window.location.href = '/login';
+    } else {
+        window.location.href = '/profile';
+    }
+}
+
+
 function showError(message) {
     alert(message); // Bisa diganti dengan toast seperti sebelumnya
 }

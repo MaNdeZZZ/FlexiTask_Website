@@ -37,6 +37,8 @@ Route::get('/forgot-password', function () {
     return view('forgot-password');
 });
 
+
+
 Route::get('/profile', function () {
     return view('profile');
 });
@@ -44,6 +46,8 @@ Route::get('/profile', function () {
 Route::get('/reset-password', function () {
     return view('reset-password');
 });
+
+
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);

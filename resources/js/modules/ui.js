@@ -36,18 +36,19 @@ export function setupProfileImage(currentUser) {
         console.error("Profile image container not found");
         return;
     }
-    
-    // const currentUser = getCurrentUser();
-    
+
     if (currentUser && currentUser.profileImage) {
-        // If we have a profile image URL, show that
-        profileImageContainer.innerHTML = `<img src="${currentUser.profileImage}" alt="Profile" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+        // ✅ Tampilkan foto profil jika ada
+        profileImageContainer.innerHTML = `
+            <img src="${currentUser.profileImage}" alt="Profile"
+                style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
     } else {
-        // Otherwise show an icon
-        profileImageContainer.innerHTML = '<i class="bi bi-person-circle" style="font-size: 2rem; color: #6c757d;"></i>';
-        profileImageContainer.style.backgroundColor = '#f8f9fa';
+        // ❌ Jangan tampilkan ikon default
+        profileImageContainer.innerHTML = ''; // kosong
+        profileImageContainer.style.backgroundColor = '#f8f9fa'; // atau bisa dikosongkan juga
     }
 }
+
 
 export function setupPriorityButtons() {
     const priorityButtons = document.querySelectorAll('#addEditTaskModal .priority-btn');

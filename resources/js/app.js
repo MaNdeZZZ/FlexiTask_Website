@@ -1,5 +1,6 @@
 // resources/js/app.js
 import { generateTaskId } from './modules/utils.js';
+import { query, where, getDocs } from 'firebase/firestore';
 import {
     checkAuthStatus  // ✅ DITAMBAHKAN kembali agar tidak error
 } from './modules/auth.js';
@@ -34,20 +35,45 @@ import { initNotifications } from './modules/notifications.js';
 import { loadFirstIncompleteTaskForCurrentUser } from './modules/data.js';
 
 function renderIncompleteTasks() {
-    if (!tasks || tasks.length === 0) {
-        console.warn('⚠️ No tasks to render yet.');
+    
+    if (!Array.isArray(tasks)) {
+        console.warn('⚠️ tasks is not an array');
         return;
     }
 
     const incompleteTasks = tasks.filter(task => !task.isCompleted);
 
+    console.log("🎯 Rendering all incomplete tasks:", incompleteTasks.length);
+
     renderTasks(
         incompleteTasks,
-        searchActive,
-        searchTerm,
+        false,    // ⛔ Tidak sedang search
+        '',       // Kosongkan keyword
         filterActive,
         activeFilters
     );
+}
+
+async function loadIncompleteTasksForCurrentUser() {
+    console.log("Loading INCOMPLETE tasks from Firestore");
+    try {
+        const currentUser = auth.currentUser || getCurrentUser();
+        if (!currentUser) {
+            console.warn("❌ No current user found");
+            return [];
+        }
+
+        const tasksRef = collection(db, `users/${currentUser.uid}/tasks`);
+        const q = query(tasksRef, where("isCompleted", "==", false));
+        const snapshot = await getDocs(q);
+        const tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        console.log(`✅ Loaded ${tasks.length} incomplete tasks`);
+        return tasks;
+    } catch (err) {
+        console.error("❌ Error loading incomplete tasks:", err);
+        return [];
+    }
 }
 
 
@@ -73,9 +99,6 @@ function getCurrentUser() {
 
 
 
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('✅ DOMContentLoaded fired');
-
     let tasks = [];
     let completedTasks = [];
     let currentUser = null;
@@ -86,6 +109,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let searchActive = false;
     let filterActive = false;
     let activeFilters = { priority: [1, 2, 3] };
+
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('✅ DOMContentLoaded fired');
+
 
     function showLoadingState() {
         const loadingDiv = document.getElementById('loading');
@@ -131,13 +158,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            tasks = await loadTasksForCurrentUser();
+            tasks = await loadIncompleteTasksForCurrentUser();
             completedTasks = await loadCompletedTasksForCurrentUser(currentUser);
-            
+
             const firstIncomplete = await loadFirstIncompleteTaskForCurrentUser();
             console.log('🧰 First incomplete task:', firstIncomplete);
 
-            console.log('📊 Data loaded, initializing modals...');
             modals = initializeModals();
 
             if (!modals || !modals.addEditTaskModal) {
@@ -146,21 +172,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            console.log('✅ Modals initialized successfully');
             setupProfileImage(currentUser);
             displayUsername(currentUser);
+            if (window.location.pathname === '/dash2' || window.location.pathname === '/dashboard') {
+                setupAllEventListeners();
+            } else {
+                console.log("⏭️ Skipping setupAllEventListeners() on non-dashboard page:", window.location.pathname);
+            }
 
-            console.log('🔗 Setting up event listeners...');
-            setupAllEventListeners();
+            // ❌ Jangan renderTasks() di sini karena bisa terlalu cepat, langsung pakai:
+            renderIncompleteTasks();
+
 
             initNotifications(tasks, modals);
-            const incompleteTasks = tasks.filter(task => task.isCompleted === false);
-            renderTasks(incompleteTasks);
-            setupRealtimeListener();
 
-            if (document.getElementById('taskContainer')) {
-                await renderIncompleteTasks();
-            }
+            console.log('📦 Rendering initial incomplete tasks...');
+            renderIncompleteTasks(); // ✅ Langsung render saat data selesai di-load
+
+            setupRealtimeListener(); // ✅ Setup real-time update terakhir
 
             console.log('🎉 App initialization complete!');
             hideLoadingState();
@@ -169,6 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
             hideLoadingState();
         }
     }
+
 
     function handleEditTask() {
         if (!currentTask) return;
@@ -189,144 +219,127 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupAllEventListeners() {
         console.log('✅ setupAllEventListeners started');
 
-        document.getElementById('addTaskBtn').addEventListener('click', () => {
+        // Tambah task
+        document.getElementById('addTaskBtn')?.addEventListener('click', () => {
             showAddTaskModal(modals);
         });
 
-    document.getElementById('saveTaskBtn').addEventListener('click', async () => {
-        const saveBtn = document.getElementById('saveTaskBtn');
-        saveBtn.disabled = true; // ✅ Cegah klik ganda
+        // Simpan task
+        document.getElementById('saveTaskBtn')?.addEventListener('click', async () => {
+            const saveBtn = document.getElementById('saveTaskBtn');
+            if (!saveBtn) return;
+            saveBtn.disabled = true;
 
-        const form = document.getElementById('taskForm');
-        const formData = new FormData(form);
-        if (!formData.get('title').trim()) {
-            alert('Please enter a task title.');
-            saveBtn.disabled = false; // Re-enable jika gagal
-            return;
-        }
-
-        const modalEl = document.getElementById('addEditTaskModal');
-        const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-        modalInstance.hide(); // ✅ Langsung tutup modal
-
-        try {
-            tasks = await logicSaveTask(formData, tasks, currentTask, editMode, currentUser);
-            await saveTasksToStorage(tasks, currentUser);
-            editMode = false;
-            currentTask = null;
-            renderIncompleteTasks();
-        } catch (err) {
-            console.error("❌ Error saving task:", err);    
-        } finally {
-            saveBtn.disabled = false;
-        }
-    });
-
-
-    document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
-        const confirmBtn = document.getElementById('confirmDeleteBtn');
-        confirmBtn.disabled = true;
-
-        if (!currentTask) {
-            confirmBtn.disabled = false;
-            return;
-        }
-
-        modals.deleteConfirmModal.hide(); // ✅ Tutup modal segera
-
-        try {
-            tasks = await logicDeleteTask(currentTask.id, tasks, currentUser);
-            await saveTasksToStorage(tasks, currentUser);
-            currentTask = null;
-            renderTasks(
-                tasks.filter(task => !task.isCompleted),
-                searchActive,
-                searchTerm,
-                filterActive,
-                activeFilters
-            );
-        } catch (err) {
-            console.error("❌ Error deleting task:", err);
-        } finally {
-            confirmBtn.disabled = false;
-        }
-    });
-
-
-        document.getElementById('editTaskBtn').addEventListener('click', () => {
-            handleEditTask();
-        });
-
-        function handleShowDetails(taskId) {
-            const foundTask = showTaskDetails(taskId, tasks, modals);
-            if (foundTask) {
-                currentTask = foundTask;
-            }
-        }
-
-        const taskContainer = document.getElementById('taskContainer');
-        if (taskContainer) {
-            taskContainer.addEventListener('click', (e) => {
-                const taskCard = e.target.closest('.task-card');
-                if (!taskCard) return;
-                const taskId = taskCard.dataset.taskId;
-
-                if (e.target.closest('.task-checkbox')) {
-                    handleToggleCompletion(taskId);
-                    return;
-                }
-                if (!taskCard.closest('#overdueTasksList')) {
-                    handleShowDetails(taskId);
-                }
-            });
-        } else {
-            console.warn("Element with ID 'taskContainer' not found for task card event delegation.");
-        }
-
-        document.getElementById('deleteTaskBtn').addEventListener('click', () => {
-            if (!currentTask) {
-                console.error('No task selected for deletion');
+            const form = document.getElementById('taskForm');
+            const formData = new FormData(form);
+            if (!formData.get('title').trim()) {
+                alert('Please enter a task title.');
+                saveBtn.disabled = false;
                 return;
             }
-            if (modals.taskDetailsModal) modals.taskDetailsModal.hide();
-            if (modals.deleteConfirmModal) modals.deleteConfirmModal.show();
+
+            const modalEl = document.getElementById('addEditTaskModal');
+            const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            modalInstance.hide();
+
+            try {
+                tasks = await logicSaveTask(formData, tasks, currentTask, editMode, currentUser);
+                await saveTasksToStorage(tasks, currentUser);
+                editMode = false;
+                currentTask = null;
+                renderIncompleteTasks();
+            } catch (err) {
+                console.error("❌ Error saving task:", err);
+            } finally {
+                saveBtn.disabled = false;
+            }
         });
 
-        document.getElementById('searchInput').addEventListener('input', (e) => {
+        // Konfirmasi delete
+        document.getElementById('confirmDeleteBtn')?.addEventListener('click', async () => {
+            const confirmBtn = document.getElementById('confirmDeleteBtn');
+            if (!confirmBtn || !currentTask) return;
+
+            confirmBtn.disabled = true;
+            modals.deleteConfirmModal?.hide();
+
+            try {
+                tasks = await logicDeleteTask(currentTask.id, tasks, currentUser);
+                await saveTasksToStorage(tasks, currentUser);
+                currentTask = null;
+                renderIncompleteTasks();
+            } catch (err) {
+                console.error("❌ Error deleting task:", err);
+            } finally {
+                confirmBtn.disabled = false;
+            }
+        });
+
+        // Edit task
+        document.getElementById('editTaskBtn')?.addEventListener('click', () => {
+            if (currentTask) {
+                editMode = true;
+                editCurrentTask(currentTask, modals);
+            }
+        });
+
+        // Klik task card
+        document.getElementById('taskContainer')?.addEventListener('click', (e) => {
+            const taskCard = e.target.closest('.task-card');
+            if (!taskCard) return;
+
+            const taskId = taskCard.dataset.taskId;
+            if (e.target.closest('.task-checkbox')) {
+                handleToggleCompletion(taskId);
+            } else if (!taskCard.closest('#overdueTasksList')) {
+                const foundTask = showTaskDetails(taskId, tasks, modals);
+                if (foundTask) currentTask = foundTask;
+            }
+        });
+
+        // Tombol delete di modal task detail
+        document.getElementById('deleteTaskBtn')?.addEventListener('click', () => {
+            if (!currentTask) return;
+            modals.taskDetailsModal?.hide();
+            modals.deleteConfirmModal?.show();
+        });
+
+        // Search
+        document.getElementById('searchInput')?.addEventListener('input', (e) => {
             searchTerm = e.target.value.trim().toLowerCase();
             searchActive = searchTerm !== '';
 
             const clearBtn = document.getElementById('clearSearchBtn');
             if (clearBtn) clearBtn.style.display = searchActive ? 'block' : 'none';
 
-            const filteredTasks = tasks.filter(task =>
-                !task.isCompleted &&
-                (
-                    task.title.toLowerCase().includes(searchTerm) ||
-                    (task.description && task.description.toLowerCase().includes(searchTerm))
-                )
-            );
-
-            renderTasks(filteredTasks);
+            if (searchActive) {
+                const filteredTasks = tasks.filter(task =>
+                    !task.isCompleted &&
+                    (
+                        task.title.toLowerCase().includes(searchTerm) ||
+                        (task.description && task.description.toLowerCase().includes(searchTerm))
+                    )
+                );
+                renderTasks(filteredTasks);
+            } else {
+                renderIncompleteTasks();
+            }
         });
 
-
-        document.getElementById('clearSearchBtn').addEventListener('click', () => {
+        // Clear search
+        document.getElementById('clearSearchBtn')?.addEventListener('click', () => {
             searchTerm = '';
             searchActive = false;
             document.getElementById('searchInput').value = '';
-
-            const clearBtn = document.getElementById('clearSearchBtn');
-            if (clearBtn) clearBtn.style.display = 'none';
-
-            renderIncompleteTasks(); // Tampilkan ulang semua task incomplete
+            document.getElementById('clearSearchBtn').style.display = 'none';
+            renderIncompleteTasks();
         });
 
-
-        document.getElementById('applyFilterBtn').addEventListener('click', () => {
-            const highPrio = document.getElementById('filterPriorityHigh').checked;
-            const medPrio = document.getElementById('filterPriorityMedium').checked;
-            const lowPrio = document.getElementById('filterPriorityLow').checked;
+        // Filter
+        document.getElementById('applyFilterBtn')?.addEventListener('click', () => {
+            const highPrio = document.getElementById('filterPriorityHigh')?.checked;
+            const medPrio = document.getElementById('filterPriorityMedium')?.checked;
+            const lowPrio = document.getElementById('filterPriorityLow')?.checked;
 
             const priorities = [];
             if (highPrio) priorities.push(3);
@@ -335,79 +348,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
             activeFilters.priority = priorities.length > 0 ? priorities : [1, 2, 3];
             filterActive = priorities.length !== 3;
-            renderIncompleteTasks(); // atau renderTasks(filteredTasks) jika pakai search
-
+            renderIncompleteTasks();
         });
 
-        document.getElementById('resetFilterBtn').addEventListener('click', () => {
+        document.getElementById('resetFilterBtn')?.addEventListener('click', () => {
             activeFilters = { priority: [1, 2, 3] };
             filterActive = false;
-            renderIncompleteTasks(); // atau renderTasks(filteredTasks) jika pakai search
-
+            renderIncompleteTasks();
         });
 
-        document.getElementById('searchToggleBtn').addEventListener('click', (e) => {
+        // Toggle search & filter panel
+        document.getElementById('searchToggleBtn')?.addEventListener('click', (e) => {
             e.preventDefault();
             toggleSearchPanel();
         });
 
-        document.getElementById('filterToggleBtn').addEventListener('click', (e) => {
+        document.getElementById('filterToggleBtn')?.addEventListener('click', (e) => {
             e.preventDefault();
             toggleFilterPanel(activeFilters);
         });
 
-        document.getElementById('overdueCounter').addEventListener('click', () => {
+        document.getElementById('overdueCounter')?.addEventListener('click', () => {
             showOverdueTasks();
         });
 
-        document.getElementById('backToToday').addEventListener('click', () => {
+        document.getElementById('backToToday')?.addEventListener('click', () => {
             showRegularTasksView();
         });
 
-        const priorityButtons = document.querySelectorAll('#addEditTaskModal .priority-btn');
-        priorityButtons.forEach(button => {
-            button.addEventListener('click', function() {
+        // Tombol prioritas (dalam modal)
+        document.querySelectorAll('#addEditTaskModal .priority-btn').forEach(button => {
+            button.addEventListener('click', function () {
                 setPriority(this.dataset.priority);
             });
         });
 
-        const addTaskBtnFallback = document.getElementById('addTaskBtn');
-        if (addTaskBtnFallback && !addTaskBtnFallback.hasAttribute('data-listener-added')) {
-            console.log('🔄 Adding fallback event listener for Add Task button');
-            addTaskBtnFallback.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('🆘 Fallback Add Task handler triggered');
-
-                const modal = document.getElementById('addEditTaskModal');
-                if (modal) {
-                    const bootstrapModal = new bootstrap.Modal(modal);
-                    const form = document.getElementById('taskForm');
-                    if (form) form.reset();
-
-                    const today = new Date().toISOString().split('T')[0];
-                    const taskDate = document.getElementById('taskDate');
-                    if (taskDate) taskDate.value = today;
-
-                    const now = new Date();
-                    now.setHours(now.getHours() + 1);
-                    const timeString = now.toTimeString().slice(0, 5);
-                    const taskTime = document.getElementById('taskTime');
-                    if (taskTime) taskTime.value = timeString;
-
-                    const modalTitle = document.getElementById('addEditModalTitle');
-                    if (modalTitle) modalTitle.textContent = 'Add New Task';
-
-                    bootstrapModal.show();
-                    console.log('✅ Fallback modal shown');
-                } else {
-                    console.error('❌ Modal element not found');
-                    alert('Error: Could not open task form');
-                }
-            });
-            addTaskBtnFallback.setAttribute('data-listener-added', 'true');
-        }
-
-        // Add logout button
+        // Tambahkan tombol logout ke header
         const logoutBtn = document.createElement('button');
         logoutBtn.textContent = 'Logout';
         logoutBtn.className = 'btn btn-outline-danger ms-2';
@@ -427,24 +403,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Failed to log out.');
             }
         });
-        document.querySelector('.header-padding').appendChild(logoutBtn);
     }
+
 
     function setupRealtimeListener() {
         const userId = currentUser.uid;
         const tasksCollection = collection(db, `users/${userId}/tasks`);
+
         onSnapshot(tasksCollection, (snapshot) => {
-        console.log("📡 Firebase tasks snapshot triggered");
-        
-        tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        console.log("📦 Loaded tasks from Firestore:", tasks);
+            console.log("📡 Firebase tasks snapshot triggered");
 
-        const incompleteTasks = tasks.filter(task => !task.isCompleted);
-        console.log("📋 Filtered incomplete tasks:", incompleteTasks);
+            // ✅ Update global tasks
+            tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        renderIncompleteTasks();
+            console.log("📦 Loaded tasks from Firestore:", tasks);
+
+            // ✅ Pastikan langsung render ulang
+            renderIncompleteTasks();
         });
-
+        
+        if (isFirstSnapshot) {
+            console.log("🎯 Rendering tasks after first snapshot");
+            renderIncompleteTasks();
+            isFirstSnapshot = false;
+        }
 
         const completedTasksCollection = collection(db, `users/${userId}/completed_tasks`);
         onSnapshot(completedTasksCollection, (snapshot) => {
@@ -452,6 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    
     
     initApp();
 });
