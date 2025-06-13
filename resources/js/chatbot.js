@@ -1,168 +1,166 @@
-document.addEventListener('DOMContentLoaded', function () {
-    const chatArea = document.getElementById('chat-area');
-    const messageInput = document.getElementById('message-input');
-    const sendButton = document.getElementById('send-button');
-    const newChatButton = document.getElementById('new-chat');
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, addDoc, query, orderBy, getDocs } from 'firebase/firestore';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
-    setupProfileImage();
+const chatArea = document.getElementById('chat-area');
+const messageInput = document.getElementById('message-input');
+const sendButton = document.getElementById('send-button');
+const newChatButton = document.getElementById('new-chat');
 
-    let messages = [];
+const firebaseConfig = {
+    apiKey: "AIzaSyDAhcqyzf8x1FXd0Zqka12t_NQaoCEWD44",
+    authDomain: "flexi-task-5d512.firebaseapp.com",
+    projectId: "flexi-task-5d512",
+    appId: "1:161145697554:web:23d9c0c67426e92a97afcb",
+};
 
-    function loadChatHistory() {
-        const savedMessages = localStorage.getItem('chatHistory');
-        if (savedMessages) {
-            messages = JSON.parse(savedMessages);
-            chatArea.innerHTML = '';
-            messages.forEach(message => {
-                if (message.isUserMessage) {
-                    renderUserMessage(message.text);
-                } else {
-                    renderBotMessage(message.text);
-                }
-            });
-            scrollToBottom();
-        } else {
-            addBotMessage("Hello! I'm your task assistant. How can I help you today?");
-        }
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+let currentUser = null;
+let messages = [];
+
+// ✅ Simpan user login ke localStorage
+function cacheUser(user) {
+    const userData = {
+        uid: user.uid,
+        email: user.email,
+        name: user.displayName || ""
+    };
+    localStorage.setItem("currentUser", JSON.stringify(userData));
+    currentUser = userData;
+}
+
+// ✅ Simpan ke Firestore
+async function saveMessageToFirestore(role, text) {
+    if (!currentUser) return;
+    try {
+        const ref = collection(db, `users/${currentUser.uid}/chat_messages`);
+        await addDoc(ref, {
+            role,
+            text,
+            timestamp: new Date()
+        });
+    } catch (error) {
+        console.error("❌ Error saving chat to Firestore:", error);
     }
+}
 
-    function saveChatHistory() {
-        localStorage.setItem('chatHistory', JSON.stringify(messages));
-    }
-
-    function renderUserMessage(text) {
-        const div = document.createElement('div');
-        div.className = 'message user-message';
-        div.textContent = text;
-        chatArea.appendChild(div);
-    }
-
-    function renderBotMessage(text) {
-        const div = document.createElement('div');
-        div.className = 'message bot-message';
-        div.textContent = text;
-        chatArea.appendChild(div);
-    }
-
-    function scrollToBottom() {
-        setTimeout(() => {
-            chatArea.scrollTop = chatArea.scrollHeight;
-        }, 100);
-    }
-
-    loadChatHistory();
-
-    sendButton.addEventListener('click', sendMessage);
-    messageInput.addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') sendMessage();
-    });
-
-    newChatButton.addEventListener('click', function () {
+// ✅ Ambil histori dari Firestore
+async function loadChatHistory() {
+    if (!currentUser) return;
+    try {
+        const ref = collection(db, `users/${currentUser.uid}/chat_messages`);
+        const q = query(ref, orderBy('timestamp'));
+        const snapshot = await getDocs(q);
         chatArea.innerHTML = '';
-        messages = [];
-        saveChatHistory();
-        addBotMessage("Hello! I'm your task assistant. How can I help you today?");
-    });
+        snapshot.forEach(doc => {
+            const chat = doc.data();
+            const text = chat.message || chat.text || "";
+            const isUser = chat.isUser ?? (chat.role === 'user');
 
-    function sendMessage() {
-        const text = messageInput.value.trim();
-        if (!text) return;
-
-        addUserMessage(text);
-        messageInput.value = '';
-        showTypingIndicator();
-        simulateBotResponse(text);
-    }
-
-    function addUserMessage(text) {
-        const div = document.createElement('div');
-        div.className = 'message user-message';
-        div.textContent = text;
-        chatArea.appendChild(div);
-        messages.push({ text, isUserMessage: true, timestamp: new Date().toISOString() });
-        saveChatHistory();
+            if (isUser) renderUserMessage(text, false);
+            else renderBotMessage(text, false);
+        });
         scrollToBottom();
+    } catch (error) {
+        console.error("❌ Error loading chat history:", error);
     }
+}
 
-    function addBotMessage(text) {
-        const div = document.createElement('div');
-        div.className = 'message bot-message';
-        div.textContent = text;
-        chatArea.appendChild(div);
-        messages.push({ text, isUserMessage: false, timestamp: new Date().toISOString() });
-        saveChatHistory();
-        scrollToBottom();
+
+// Fungsi render pesan user
+function renderUserMessage(text, save = true) {
+    const div = document.createElement('div');
+    div.className = 'user-message';
+    div.textContent = text;
+    chatArea.appendChild(div);
+    if (save) saveMessageToFirestore('user', text);
+}
+
+// Fungsi render pesan bot
+function renderBotMessage(text, save = true) {
+    if (!text || typeof text !== "string") {
+        console.warn("⚠️ Bot message kosong atau bukan string:", text);
+        return;
     }
+    const div = document.createElement('div');
+    div.className = 'bot-message';
+    div.textContent = text;
+    chatArea.appendChild(div);
+    if (save) saveMessageToFirestore('assistant', text);
+}
 
-    function showTypingIndicator() {
-        const typingDiv = document.createElement('div');
-        typingDiv.className = 'typing-indicator';
-        typingDiv.id = 'typing-indicator';
-        for (let i = 0; i < 3; i++) {
-            const dot = document.createElement('div');
-            dot.className = 'typing-dot';
-            typingDiv.appendChild(dot);
+
+// Scroll otomatis ke bawah
+function scrollToBottom() {
+    chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+// Fungsi kirim ke API Groq
+async function sendMessage() {
+    const inputText = messageInput.value.trim();
+    if (!inputText) return;
+
+    renderUserMessage(inputText);
+    scrollToBottom();
+    messageInput.value = "";
+
+    messages.push({ role: "user", content: inputText });
+
+    try {
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Authorization": "Bearer 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",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                model: "llama3-70b-8192",
+                messages: [
+                    { role: "system", content: "Kamu adalah asisten pribadi pengguna terkait manajemen tugas." },
+                    ...messages
+                ]
+            })
+        });
+
+        const data = await response.json();
+        const reply = data?.choices?.[0]?.message?.content;
+
+        if (reply) {
+            messages.push({ role: "assistant", content: reply });
+            renderBotMessage(reply);
+        } else {
+            renderBotMessage("⚠️ Bot tidak membalas. Cek API key atau model.");
         }
-        chatArea.appendChild(typingDiv);
+
         scrollToBottom();
+    } catch (error) {
+        console.error("Groq Chat Error:", error);
+        renderBotMessage("❌ Terjadi kesalahan koneksi.");
     }
+}
 
-    function hideTypingIndicator() {
-        const typing = document.getElementById('typing-indicator');
-        if (typing) typing.remove();
-    }
-
-    async function simulateBotResponse(userMessage) {
-        try {
-            const response = await fetch('/api/groq-chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                },
-                body: JSON.stringify({ message: userMessage })
-            });
-
-            // Cek apakah response JSON valid
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                throw new Error("Invalid JSON response from server");
-            }
-
-            const data = await response.json();
-            console.log("👉 Groq response:", data);
-
-            hideTypingIndicator();
-
-            if (!data || typeof data.reply !== 'string' || !data.reply.trim()) {
-                console.warn("⚠️ Invalid or empty response from Groq:", data);
-                addBotMessage("⚠️ Assistant is temporarily unavailable. Please try again.");
-                return;
-            }
-
-            addBotMessage(data.reply);
-        } catch (error) {
-            hideTypingIndicator();
-            addBotMessage("⚠️ Failed to get a response. Please check your connection or try again.");
-            console.error("Groq Chat Error:", error);
-        }
-    }
-
+// Event listener
+sendButton.addEventListener("click", sendMessage);
+messageInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") sendMessage();
+});
+newChatButton.addEventListener("click", () => {
+    messages = [];
+    chatArea.innerHTML = "";
+    renderBotMessage("Halo! Saya asisten tugas kamu. Ada yang bisa dibantu?");
 });
 
-// Profile image setup
-function setupProfileImage() {
-    const profileImgContainer = document.getElementById('profileImage');
-    const currentUser = getCurrentUser();
-
-    if (currentUser && currentUser.profileImage) {
-        profileImgContainer.innerHTML = `<img src="${currentUser.profileImage}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">`;
-    } else {
-        profileImgContainer.innerHTML = `<i class="bi bi-person-circle" style="font-size: 40px; color: #6c757d;"></i>`;
-        profileImgContainer.style.backgroundColor = '#f8f9fa';
-    }
-}
-
-function getCurrentUser() {
-    return JSON.parse(localStorage.getItem('currentUser') || 'null');
-}
+// ✅ Cek login Firebase Auth saat halaman siap
+document.addEventListener("DOMContentLoaded", () => {
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            cacheUser(user);
+            loadChatHistory();
+        } else {
+            renderBotMessage("Halo! Silakan login terlebih dahulu.");
+        }
+    });
+});

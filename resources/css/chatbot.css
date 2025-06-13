@@ -4,7 +4,6 @@ body {
     height: 100vh;
     display: flex;
     flex-direction: column;
-    padding-bottom: 70px; 
 }
 
 .main-container {
@@ -43,43 +42,101 @@ body {
 .chat-area {
     flex: 1;
     overflow-y: auto;
-    background-color: #e6e6e6;
     padding: 12px;
-    padding-bottom: 150px; 
-    margin-bottom: 0; 
+    padding-bottom: 120px; /* beri ruang agar tidak ketutupan input + nav */
+    background-color: #e6e6e6;
 }
 
 .message {
     margin: 8px 0;
     max-width: 70%;
-    padding: 12px;
-    border-radius: 12px;
+    padding: 12px 16px;
+    border-radius: 16px;
+    position: relative;
 }
 
+
+
+.user-message, .bot-message {
+    padding: 12px 16px;
+    margin: 6px 0;
+    max-width: 75%;
+    border-radius: 18px;
+    font-size: 14px;
+    line-height: 1.4;
+    word-break: break-word;
+    display: inline-block;
+}
+
+.user-message, .bot-message {
+    padding: 12px 16px;
+    max-width: 75%;
+    font-size: 14px;
+    line-height: 1.4;
+    word-break: break-word;
+    border-radius: 18px;
+    display: inline-block;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+/* User bubble - kanan */
 .user-message {
     background-color: white;
-    margin-left: auto;
-    border: 1px solid rgba(0,0,0,0.1);
-    color: #333;
-}
-
-.bot-message {
-    background-color: #9e9e9e;
-    margin-right: auto;
     color: black;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    align-self: flex-end;
+    margin-left: auto;
+    border-bottom-right-radius: 0;
 }
 
+/* Bot bubble - kiri */
+.bot-message {
+  background-color: #9e9e9e;
+  color: white; /* atau warna kontras lainnya */
+  padding: 12px;
+  border-radius: 16px;
+  margin-bottom: 12px;
+  max-width: 75%;
+}
+
+
+/* Area chat: atur layout kolom */
+.chat-area {
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    padding-bottom: 120px;
+    overflow-y: auto;
+    background-color: #e6e6e6;
+}
+
+
+.bot-message::after {
+    content: '';
+    position: absolute;
+    left: -10px;
+    top: 10px;
+    width: 0;
+    height: 0;
+    border-right: 10px solid #9e9e9e;
+    border-top: 10px solid transparent;
+    border-bottom: 10px solid transparent;
+}
+
+/* Input box now touches bottom */
 .input-area {
-    padding: 15px 16px;
+    padding: 10px 16px;
     background-color: white;
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.1); 
-    position: fixed; 
-    bottom: 70px; 
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+    position: fixed;
+    bottom: 56px; /* harus sama dengan tinggi navbar */
     left: 0;
     right: 0;
-    z-index: 1000; 
-    border-top: 1px solid #e0e0e0; 
+    z-index: 999;
+    border-top: 1px solid #e0e0e0;
 }
+
 
 .circle-button {
     width: 40px;
@@ -93,15 +150,15 @@ body {
 }
 
 .message-input {
-    border-radius: 25px;
+    border-radius: 50px;
     background-color: #f5f5f5;
-    border: 1px solid #e0e0e0;
-    padding: 12px 16px;
+    border: 1px solid #ccc;
+    padding: 10px 16px;
 }
 
 .message-input:focus {
     outline: none;
-    border-color: #ccc;
+    border-color: #bbb;
 }
 
 .bottom-nav-link {
