@@ -188,6 +188,26 @@
         style="bottom: 80px; right: 20px; z-index: 1050; width: 60px; height: 60px; font-size: 24px;">
     <i class="bi bi-plus-lg"></i>
 </button>
+<div class="modal" id="completeConfirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Complete Task</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to mark this task as completed?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button id="confirmCompleteBtn" type="button" class="btn btn-success">Yes, Mark as Completed</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

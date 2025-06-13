@@ -11,7 +11,7 @@ import {
     saveCompletedTasksToStorage
 } from './modules/data.js';
 import { db, auth } from './firebase.js';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc  } from 'firebase/firestore';
 import {
     initializeModals,
     renderTasks,
@@ -97,6 +97,46 @@ function getCurrentUser() {
     }
 }
 
+    function setupCompletionUI() {
+    document.getElementById('taskContainer')?.addEventListener('click', (e) => {
+        const checkbox = e.target.closest('.task-checkbox');
+        if (checkbox) {
+            const taskCard = e.target.closest('.task-card');
+            if (!taskCard) return;
+            selectedCompleteTaskId = taskCard.dataset.taskId;
+            const modal = new bootstrap.Modal(document.getElementById("completeConfirmModal"));
+            modal.show();
+        }
+    });
+
+document.getElementById("confirmCompleteBtn")?.addEventListener("click", async () => {
+  if (!selectedCompleteTaskId || !currentUser) return;
+
+  const uid = currentUser.uid;
+
+  // ✅ DIDEFINISIKAN DI AWAL
+  const modalEl = document.getElementById("completeConfirmModal");
+  const modalInstance = bootstrap.Modal.getInstance(modalEl);
+
+  try {
+    const taskRef = doc(db, `users/${uid}/tasks/${selectedCompleteTaskId}`);
+    await updateDoc(taskRef, {
+      isCompleted: true,
+      completed: true,
+      completedDate: new Date().toISOString()
+    });
+
+    selectedCompleteTaskId = null;
+    renderIncompleteTasks();
+  } catch (err) {
+    console.error("❌ Failed to complete task:", err);
+  } finally {
+    // ✅ DI SINI modalInstance SUDAH TERDEFINISI
+    if (modalInstance) modalInstance.hide();
+  }
+});
+
+}
 
 
     let tasks = [];
@@ -108,6 +148,7 @@ function getCurrentUser() {
     let searchTerm = '';
     let searchActive = false;
     let filterActive = false;
+    let selectedCompleteTaskId = null;
     let activeFilters = { priority: [1, 2, 3] };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -183,6 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // ❌ Jangan renderTasks() di sini karena bisa terlalu cepat, langsung pakai:
             renderIncompleteTasks();
 
+            setupCompletionUI();
 
             initNotifications(tasks, modals);
 
@@ -290,7 +332,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const taskId = taskCard.dataset.taskId;
             if (e.target.closest('.task-checkbox')) {
-                handleToggleCompletion(taskId);
+                const modalEl = document.getElementById("completeConfirmModal");
+                const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                modalInstance.hide();
             } else if (!taskCard.closest('#overdueTasksList')) {
                 const foundTask = showTaskDetails(taskId, tasks, modals);
                 if (foundTask) currentTask = foundTask;

@@ -5,8 +5,15 @@ import {
   query,
   where,
   updateDoc,
+  setDoc,
+  deleteDoc,
   doc,
+  getDoc,
 } from "firebase/firestore";
+
+// Variabel sementara untuk restore
+let selectedTaskId = null;
+let selectedTaskSource = null;
 
 // Ambil user login dari localStorage
 function getCurrentUser() {
@@ -20,7 +27,7 @@ async function loadCompletedTasksForCurrentUser() {
 
   let completedTasks = [];
 
-  // 1. Ambil dari /users/{uid}/tasks dengan isCompleted == true
+  // 1. Dari /tasks
   try {
     const tasksRef = collection(db, "users", currentUser.uid, "tasks");
     const q1 = query(tasksRef, where("isCompleted", "==", true));
@@ -35,16 +42,16 @@ async function loadCompletedTasksForCurrentUser() {
     console.warn("Gagal load dari /tasks:", e.message);
   }
 
-  // 2. Coba ambil juga dari /users/{uid}/completed_tasks (jika ada)
+  // 2. Dari /completed_tasks
   try {
     const completedTasksRef = collection(db, "users", currentUser.uid, "completed_tasks");
     const snapshot2 = await getDocs(completedTasksRef);
-    const tasksFromCompletedTasks = snapshot2.docs.map((doc) => ({
+    const tasksFromCompleted = snapshot2.docs.map((doc) => ({
       id: doc.id,
       source: "completed_tasks",
       ...doc.data(),
     }));
-    completedTasks = completedTasks.concat(tasksFromCompletedTasks);
+    completedTasks = completedTasks.concat(tasksFromCompleted);
   } catch (e) {
     console.warn("Gagal load dari /completed_tasks:", e.message);
   }
@@ -53,44 +60,57 @@ async function loadCompletedTasksForCurrentUser() {
   return completedTasks;
 }
 
-// Pulihkan task ke status aktif (hanya yang dari /tasks bisa dipulihkan)
+// Fungsi untuk me-restore task
 async function restoreTask(taskId, event) {
-  if (event) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
-
   const currentUser = getCurrentUser();
   if (!currentUser) {
     showToastMessage("Error: User not found");
     return;
   }
 
+  const uid = currentUser.uid;
+
   try {
-    const taskRef = doc(db, "users", currentUser.uid, "tasks", taskId);
+    const source = selectedTaskSource;
 
-    // Set status task jadi aktif
-    await updateDoc(taskRef, {
-      isCompleted: false,
-      completed: false,
-      completedDate: null,
-    });
+    if (source === "completed_tasks") {
+      const completedDocRef = doc(db, "users", uid, "completed_tasks", taskId);
+      const snap = await getDoc(completedDocRef);
+      const data = snap.data();
 
-    showToastMessage("Task restored successfully");
-    renderTasks();
+      if (!data) throw new Error("Data not found in completed_tasks");
+
+      await setDoc(doc(db, "users", uid, "tasks", taskId), {
+        ...data,
+        isCompleted: false,
+        completed: false,
+        completedDate: null,
+      });
+
+      await deleteDoc(completedDocRef);
+    } else {
+      const taskRef = doc(db, "users", uid, "tasks", taskId);
+      await updateDoc(taskRef, {
+        isCompleted: false,
+        completed: false,
+        completedDate: null,
+      });
+    }
+
+    showToastMessage("✅ Task restored successfully");
+    await renderTasks();
   } catch (e) {
-    console.error("Error restoring task:", e);
-    showToastMessage("Error restoring task: " + e.message);
+    console.error("❌ Error restoring task:", e);
+    showToastMessage("Failed to restore task: " + e.message);
   }
 }
 
-// Render ulang task yang selesai
+// Render ulang daftar task yang selesai
 async function renderTasks() {
   const taskListContainer = document.getElementById("taskListContainer");
   const emptyState = document.getElementById("emptyState");
 
   const completedTasks = await loadCompletedTasksForCurrentUser();
-
   taskListContainer.innerHTML = "";
 
   if (completedTasks.length === 0) {
@@ -102,43 +122,55 @@ async function renderTasks() {
 
   completedTasks.forEach((task) => {
     const taskCard = document.createElement("div");
-    taskCard.className = "card task-card";
+    taskCard.className = "card task-card mb-2";
+    taskCard.setAttribute("data-task-id", task.id);
+    taskCard.setAttribute("data-source", task.source);
+
     taskCard.innerHTML = `
       <div class="card-body p-3">
         <div class="d-flex justify-content-between">
           <div class="flex-grow-1">
             <div class="d-flex align-items-center">
               ${task.priority > 1
-                ? `<div class="priority-${
-                    task.priority === 3 ? "high" : "medium"
-                  }"></div>`
+                ? `<div class="priority-${task.priority === 3 ? "high" : "medium"} me-2"></div>`
                 : ""}
-              <h6 class="completed-title">${task.title}</h6>
+              <h6 class="completed-title mb-0">${task.title}</h6>
             </div>
-            ${task.description ? `<p class="task-description">${task.description}</p>` : ""}
-            <p class="completion-date">Completed on ${task.completedDate || "-"}</p>
+            ${task.description ? `<p class="task-description mb-1">${task.description}</p>` : ""}
+            <p class="completion-date text-muted small mb-0">Completed on ${task.completedDate || "-"}</p>
           </div>
-          ${
-            task.source === "tasks"
-              ? `<button class="restore-btn" data-task-id="${task.id}">
-                  <i class="bi bi-arrow-counterclockwise"></i>
-                </button>`
-              : ""
-          }
         </div>
       </div>
     `;
 
-    taskListContainer.appendChild(taskCard);
+    // Saat diklik, tampilkan modal restore
+    taskCard.addEventListener("click", () => {
+      selectedTaskId = task.id;
+      selectedTaskSource = task.source;
 
-    const restoreBtn = taskCard.querySelector(".restore-btn");
-    if (restoreBtn) {
-      restoreBtn.addEventListener("click", function (e) {
-        restoreTask(this.dataset.taskId, e);
-      });
-    }
+      const modal = new bootstrap.Modal(document.getElementById("restoreConfirmModal"));
+      modal.show();
+    });
+
+    taskListContainer.appendChild(taskCard);
   });
 }
+
+// Saat tombol "Yes, Restore" ditekan
+document.getElementById("confirmRestoreBtn").addEventListener("click", async () => {
+  if (selectedTaskId) {
+    // Tutup modal popup
+    const modalEl = document.getElementById("restoreConfirmModal");
+    const modalInstance = bootstrap.Modal.getInstance(modalEl);
+    if (modalInstance) modalInstance.hide();
+
+    // Lanjut restore
+    await restoreTask(selectedTaskId);
+    selectedTaskId = null;
+    selectedTaskSource = null;
+  }
+});
+
 
 // Inisialisasi saat halaman selesai dimuat
 document.addEventListener("DOMContentLoaded", async () => {
@@ -150,5 +182,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   console.log("Initializing completed tasks page");
   await renderTasks();
-  setupProfileImage();
+  setupProfileImage(currentUser);
 });
+
+// Dummy toast (ganti sesuai implementasimu)
+function showToastMessage(msg) {
+  //alert(msg); // Ganti ini dengan toast UI sesuai proyekmu
+}
