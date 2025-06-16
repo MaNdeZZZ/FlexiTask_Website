@@ -1,0 +1,212 @@
+body {
+    font-family: 'Lexend', 'Arial', sans-serif;
+    background-color: black;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: white;
+    overflow: hidden;
+    height: calc(100vh - 70px); 
+    position: relative; 
+}
+
+.header {
+    padding: 20px;
+    background-color: white;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.profile-pic {
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    border: 2px solid #D9D9D9;
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.chat-prompt {
+    padding: 16px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    padding-bottom: 120px; /* beri ruang agar tidak ketutupan input + nav */
+    background-color: #e6e6e6;
+}
+
+.message {
+    margin: 8px 0;
+    max-width: 70%;
+    padding: 12px 16px;
+    border-radius: 16px;
+    position: relative;
+}
+
+
+
+.user-message, .bot-message {
+    padding: 12px 16px;
+    margin: 6px 0;
+    max-width: 75%;
+    border-radius: 18px;
+    font-size: 14px;
+    line-height: 1.4;
+    word-break: break-word;
+    display: inline-block;
+}
+
+.user-message, .bot-message {
+    padding: 12px 16px;
+    max-width: 75%;
+    font-size: 14px;
+    line-height: 1.4;
+    word-break: break-word;
+    border-radius: 18px;
+    display: inline-block;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+/* User bubble - kanan */
+.user-message {
+    background-color: white;
+    color: black;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    align-self: flex-end;
+    margin-left: auto;
+    border-bottom-right-radius: 0;
+}
+
+/* Bot bubble - kiri */
+.bot-message {
+  background-color: #9e9e9e;
+  color: white; /* atau warna kontras lainnya */
+  padding: 12px;
+  border-radius: 16px;
+  margin-bottom: 12px;
+  max-width: 75%;
+}
+
+
+/* Area chat: atur layout kolom */
+.chat-area {
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    padding-bottom: 120px;
+    overflow-y: auto;
+    background-color: #e6e6e6;
+}
+
+
+.bot-message::after {
+    content: '';
+    position: absolute;
+    left: -10px;
+    top: 10px;
+    width: 0;
+    height: 0;
+    border-right: 10px solid #9e9e9e;
+    border-top: 10px solid transparent;
+    border-bottom: 10px solid transparent;
+}
+
+/* Input box now touches bottom */
+.input-area {
+    padding: 10px 16px;
+    background-color: white;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+    position: fixed;
+    bottom: 56px; /* harus sama dengan tinggi navbar */
+    left: 0;
+    right: 0;
+    z-index: 999;
+    border-top: 1px solid #e0e0e0;
+}
+
+
+.circle-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #D9D9D9;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.message-input {
+    border-radius: 50px;
+    background-color: #f5f5f5;
+    border: 1px solid #ccc;
+    padding: 10px 16px;
+}
+
+.message-input:focus {
+    outline: none;
+    border-color: #bbb;
+}
+
+.bottom-nav-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #6c757d;
+    text-decoration: none;
+}
+
+.bottom-nav-link.active {
+    color: #34A853; /* Using var(--accent) value from dash2.css */
+}
+
+.bottom-nav-link i {
+    font-size: 1.5rem;
+}
+
+.typing-indicator {
+    display: flex;
+    padding: 10px;
+    background-color: #9e9e9e;
+    border-radius: 12px;
+    width: fit-content;
+}
+
+.typing-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: rgba(70, 70, 70, 0.7);
+    margin: 0 2px;
+    animation: pulse 1.5s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(1) { animation-delay: 0ms; }
+.typing-dot:nth-child(2) { animation-delay: 200ms; }
+.typing-dot:nth-child(3) { animation-delay: 400ms; }
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+}
+
+/* Section for header content */
+.header-section {
+    flex-shrink: 0; 
+}
+.header-padding {
+    padding: 24px 24px 0 24px; /* Equivalent to pt-4 pr-4 pb-0 pl-4 */
+}

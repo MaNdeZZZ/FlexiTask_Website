@@ -6,7 +6,11 @@
 /storage/*.key
 /storage/pail
 /vendor
+<<<<<<< HEAD
 .env
+=======
+#.env
+>>>>>>> Bakudapa
 .env.backup
 .env.production
 .phpactor.json
